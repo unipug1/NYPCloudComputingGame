@@ -13,7 +13,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         public RectTransform rect;
         public UnityEngine.UI.Image shadowOverlay;
 
-        [Header("Available Pose (Player Turn - In Hand)")]
+        [Header("Available Pose (Player Turn - Ready)")]
         public Vector3 availablePos;
         public float availableRotZ;
         public Vector3 availableScale = Vector3.one;
@@ -102,13 +102,51 @@ public class LLM_Minigame_PropController : MonoBehaviour
         ApplyPoseInstant(clipboard, clipboard.unavailablePos, clipboard.unavailableRotZ, clipboard.unavailableScale);
         SetShadowInstant(clipboard, dimAlpha, true);
 
-        // phone is hidden completely
+        // phone starts put away completely
         phone.rect.gameObject.SetActive(false);
         ApplyPoseInstant(phone, phone.switchOffscreenPos, phone.switchOffscreenRotZ, phone.switchOffscreenScale);
         SetShadowInstant(phone, 0f, false);
     }
 
-    // called when dialogue starts or finishes
+    // called when player submits answer: prop slides all the way out offscreen
+    public void SwitchOutActiveProp(Action onComplete)
+    {
+        PropData activeProp = GetCurrentProp();
+
+        if (propRoutine != null)
+        {
+            StopCoroutine(propRoutine);
+        }
+
+        propRoutine = StartCoroutine(SwitchOutRoutine(activeProp, onComplete));
+    }
+
+    private IEnumerator SwitchOutRoutine(PropData prop, Action onComplete)
+    {
+        Vector3 startPos = prop.rect.anchoredPosition;
+        float startRot = prop.rect.localEulerAngles.z;
+        Vector3 startScale = prop.rect.localScale;
+
+        float timer = 0f;
+        while (timer < switchOutDuration)
+        {
+            timer += Time.deltaTime;
+            float progress = switchCurve.Evaluate(Mathf.Clamp01(timer / switchOutDuration));
+
+            prop.rect.anchoredPosition = Vector3.LerpUnclamped(startPos, prop.switchOffscreenPos, progress);
+            prop.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(startRot, prop.switchOffscreenRotZ, progress));
+            prop.rect.localScale = Vector3.LerpUnclamped(startScale, prop.switchOffscreenScale, progress);
+
+            yield return null;
+        }
+
+        ApplyPoseInstant(prop, prop.switchOffscreenPos, prop.switchOffscreenRotZ, prop.switchOffscreenScale);
+        prop.rect.gameObject.SetActive(false);
+
+        onComplete?.Invoke();
+    }
+
+    // called when dialogue finishes or when player bubble closes to return prop
     public void SetFocusState(bool toPlayerTurn)
     {
         isPlayerTurn = toPlayerTurn;
@@ -127,6 +165,9 @@ public class LLM_Minigame_PropController : MonoBehaviour
 
     private IEnumerator AnimatePropFocus(PropData prop, bool toAvailable)
     {
+        // re-activate the prop in case it was hidden while player bubble was talking
+        prop.rect.gameObject.SetActive(true);
+
         Vector3 targetPos = toAvailable ? prop.availablePos : prop.unavailablePos;
         float targetRot = toAvailable ? prop.availableRotZ : prop.unavailableRotZ;
         Vector3 targetScale = toAvailable ? prop.availableScale : prop.unavailableScale;
@@ -137,6 +178,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         Vector3 startScale = prop.rect.localScale;
         float startAlpha = prop.shadowOverlay != null ? prop.shadowOverlay.color.a : 0f;
 
+        // block clicks when unavailable, allow when available
         if (prop.shadowOverlay != null)
         {
             prop.shadowOverlay.raycastTarget = !toAvailable;
@@ -167,7 +209,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         SetShadowInstant(prop, targetAlpha, !toAvailable);
     }
 
-    // called when player clicks the toggle button
+    // called when player toggles between clipboard and phone
     public void ToggleProps(Action onComplete = null)
     {
         if (!isPlayerTurn || isSwitching) return;
@@ -189,7 +231,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
 
     private IEnumerator TwoPhaseSwapRoutine(PropData outgoing, PropData incoming, Action onComplete)
     {
-        // phase 1: outgoing prop switches out from available to its offscreen pose
+        // phase 1: outgoing prop exits to offscreen pose
         Vector3 outStartPos = outgoing.rect.anchoredPosition;
         float outStartRot = outgoing.rect.localEulerAngles.z;
         Vector3 outStartScale = outgoing.rect.localScale;
@@ -211,7 +253,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         ApplyPoseInstant(outgoing, outgoing.switchOffscreenPos, outgoing.switchOffscreenRotZ, outgoing.switchOffscreenScale);
         outgoing.rect.gameObject.SetActive(false);
 
-        // phase 2: incoming prop enters from its offscreen pose directly into available pose
+        // phase 2: incoming prop enters from offscreen pose into available pose
         incoming.rect.gameObject.SetActive(true);
         ApplyPoseInstant(incoming, incoming.switchOffscreenPos, incoming.switchOffscreenRotZ, incoming.switchOffscreenScale);
         SetShadowInstant(incoming, 0f, false);

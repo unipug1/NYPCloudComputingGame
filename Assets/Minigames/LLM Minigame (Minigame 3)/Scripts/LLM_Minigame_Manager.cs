@@ -1,5 +1,17 @@
 using UnityEngine;
 
+public enum LLM_Minigame_State
+{
+    IntroWarning,
+    NPCSpeaking,
+    PlayerInput,
+    PlayerSpeaking,
+    NPCThinking,
+    AttemptsUpModal,
+    GameWonModal,
+    TransitionLock
+}
+
 public class LLM_Minigame_Manager : MonoBehaviour
 {
     [Header("Controllers")]
@@ -7,104 +19,233 @@ public class LLM_Minigame_Manager : MonoBehaviour
     [SerializeField] private LLM_Minigame_UIController uiController;
     [SerializeField] private LLM_Minigame_TrustMeter trustMeter;
     [SerializeField] private LLM_Minigame_CharacterView characterView;
+    [SerializeField] private LLM_Minigame_FocusController focusController;
+    [SerializeField] private LLM_Minigame_PropController propController;
+
+    [Header("Intro & Screen Transitions")]
+    [SerializeField] private LLM_Minigame_WarningBar warningBar;
+    [SerializeField] private LLM_Minigame_ScreenFader screenFader;
 
     [Header("Settings")]
     [SerializeField] private int maxAttempts = 5;
 
-    private int remainingAttempts;
+    private LLM_Minigame_State currentState;
+    private int attemptsUsed = 0;
     private bool unlimitedMode = false;
-    private bool gameWon = false;
+    private bool hasShownAttemptsModal = false;
+
+    private float elapsedTime = 0f;
+    private bool isTimerRunning = false;
+    private string lastSubmittedPlayerText = "";
 
     private void Start()
     {
-        uiController.Setup(OnPlayerSubmitted, OnContinueChosen, OnRestartChosen);
+        uiController.Setup(OnPlayerSubmittedAnswer, OnContinueChosen, OnRestartChosen);
         StartNewGame();
     }
 
     private void Update()
     {
-        // only reset if admin pressed r AND the player is NOT currently typing in the input box
-        if (Input.GetKeyDown(KeyCode.R) && !uiController.IsInputFieldFocused())
+        if (isTimerRunning)
         {
-            StartNewGame();
+            elapsedTime += Time.deltaTime;
+        }
+
+        // pressing r triggers the clean restart transition
+        if (Input.GetKeyDown(KeyCode.R) && !uiController.IsInputFieldFocused() && currentState != LLM_Minigame_State.TransitionLock)
+        {
+            OnRestartChosen();
         }
     }
 
     public void StartNewGame()
     {
-        remainingAttempts = maxAttempts;
+        ResetStateAndBoards();
+
+        // play warning banner
+        SetState(LLM_Minigame_State.IntroWarning);
+
+        if (warningBar != null)
+        {
+            warningBar.PlayWarning(OnWarningComplete);
+        }
+        else
+        {
+            OnWarningComplete();
+        }
+    }
+
+    private void ResetStateAndBoards()
+    {
+        isTimerRunning = false;
+        elapsedTime = 0f;
+        attemptsUsed = 0;
         unlimitedMode = false;
-        gameWon = false;
+        hasShownAttemptsModal = false;
+        lastSubmittedPlayerText = "";
 
         bridge.ResetSteps();
         trustMeter.ResetTrust();
         uiController.ClearAll();
         characterView.ResetCharacter("Neutral");
-
-        // trigger initial guard line
-        uiController.SetThinking(true);
-        bridge.SendPlayerMessage("start", OnGuardReplied);
+        propController.SetupInitialState();
+        focusController.SnapToNPCFocus();
     }
 
-    private void OnPlayerSubmitted(string message)
+    private void OnWarningComplete()
     {
-        if (gameWon) return;
-
-        // check if out of attempts
-        if (!unlimitedMode)
-        {
-            remainingAttempts--;
-            if (remainingAttempts < 0)
-            {
-                uiController.ShowAttemptsPopup(true);
-                return;
-            }
-        }
-
+        isTimerRunning = true;
+        SetState(LLM_Minigame_State.NPCSpeaking);
         uiController.SetThinking(true);
-        bridge.SendPlayerMessage(message, OnGuardReplied);
+        bridge.SendPlayerMessage("start", OnGuardResponseReceived);
     }
 
-    private void OnGuardReplied(LLM_Minigame_ResponseData response)
+    private void OnPlayerSubmittedAnswer(string spokenDialogue)
+    {
+        if (currentState != LLM_Minigame_State.PlayerInput) return;
+
+        // save text so it carries over to the bridge
+        lastSubmittedPlayerText = spokenDialogue;
+        attemptsUsed++;
+        SetState(LLM_Minigame_State.PlayerSpeaking);
+
+        // tool slides out to offscreen pose
+        propController.SwitchOutActiveProp(() =>
+        {
+            // player bubble pops in only after tool is out
+            uiController.PlayPlayerBubble(spokenDialogue, OnPlayerBubbleFinished);
+        });
+    }
+
+    private void OnPlayerBubbleFinished()
+    {
+        SetState(LLM_Minigame_State.NPCThinking);
+
+        // left shifts back into focus and prop returns to unavailable pose
+        focusController.TransitionToNPCFocus();
+        uiController.SetThinking(true);
+
+        // send the actual player dialogue to the bridge
+        bridge.SendPlayerMessage(lastSubmittedPlayerText, OnGuardResponseReceived);
+    }
+
+    private void OnGuardResponseReceived(LLM_Minigame_ResponseData response)
     {
         uiController.SetThinking(false);
 
-        // update character emotion and bounce if it changed
         characterView.ApplyEmotion(response.emotionKey);
 
-        // update dialogue and guard history
-        uiController.DisplayGuardDialogue(response.guardDialogue);
-
-        // update the preset button texts
         if (response.presetOptions != null && response.presetOptions.Length > 0)
         {
             uiController.SetPresets(response.presetOptions);
         }
 
-        // move trust slider smoothly
         trustMeter.ChangeTrust(response.trustChange);
 
-        // check if player reached 100 percent
+        SetState(LLM_Minigame_State.NPCSpeaking);
+        uiController.DisplayGuardDialogue(response.guardDialogue, OnGuardDialogueFinished);
+    }
+
+    private void OnGuardDialogueFinished()
+    {
+        // check win condition
         if (trustMeter.GetCurrentTrust() >= 100f)
         {
-            gameWon = true;
-            Debug.Log("Server room access granted");
+            TriggerWin();
+            return;
         }
-        // if player used up their last attempt on this turn
-        else if (!unlimitedMode && remainingAttempts <= 0)
+
+        // check attempts condition
+        if (!unlimitedMode && attemptsUsed >= maxAttempts && !hasShownAttemptsModal)
         {
-            uiController.ShowAttemptsPopup(true);
+            TriggerAttemptsExhausted();
+            return;
         }
+
+        SetState(LLM_Minigame_State.PlayerInput);
+        focusController.TransitionToPlayerFocus();
+    }
+
+    private void TriggerWin()
+    {
+        isTimerRunning = false;
+        SetState(LLM_Minigame_State.GameWonModal);
+
+        int minutes = Mathf.FloorToInt(elapsedTime / 60f);
+        int seconds = Mathf.FloorToInt(elapsedTime % 60f);
+        string formattedTime = string.Format("{0:00}:{1:00}", minutes, seconds);
+
+        uiController.ShowWinModal(formattedTime, attemptsUsed, maxAttempts);
+    }
+
+    private void TriggerAttemptsExhausted()
+    {
+        hasShownAttemptsModal = true;
+        SetState(LLM_Minigame_State.TransitionLock);
+
+        uiController.ShowAttemptsModal(() =>
+        {
+            SetState(LLM_Minigame_State.AttemptsUpModal);
+        });
     }
 
     private void OnContinueChosen()
     {
-        unlimitedMode = true;
-        uiController.ShowAttemptsPopup(false);
+        if (currentState != LLM_Minigame_State.AttemptsUpModal) return;
+
+        SetState(LLM_Minigame_State.TransitionLock);
+
+        uiController.HideAttemptsModal(() =>
+        {
+            unlimitedMode = true;
+            SetState(LLM_Minigame_State.PlayerInput);
+            focusController.TransitionToPlayerFocus();
+        });
     }
 
     private void OnRestartChosen()
     {
-        StartNewGame();
+        SetState(LLM_Minigame_State.TransitionLock);
+
+        if (screenFader != null)
+        {
+            screenFader.DoFullTransition(
+                onBlack: () =>
+                {
+                    // clear boards and hide all modals while screen is black
+                    ResetStateAndBoards();
+                },
+                onFinished: () =>
+                {
+                    // only play warning after screen has faded back to clear
+                    SetState(LLM_Minigame_State.IntroWarning);
+                    if (warningBar != null)
+                    {
+                        warningBar.PlayWarning(OnWarningComplete);
+                    }
+                    else
+                    {
+                        OnWarningComplete();
+                    }
+                }
+            );
+        }
+        else
+        {
+            StartNewGame();
+        }
+    }
+
+    public void OnDialogueBoxClicked()
+    {
+        if (currentState == LLM_Minigame_State.NPCSpeaking)
+        {
+            uiController.OnDialogueBoxClicked(OnGuardDialogueFinished);
+        }
+    }
+
+    private void SetState(LLM_Minigame_State newState)
+    {
+        currentState = newState;
     }
 }

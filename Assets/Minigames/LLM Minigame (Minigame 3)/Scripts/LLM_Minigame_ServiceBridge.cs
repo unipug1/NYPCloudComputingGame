@@ -16,34 +16,51 @@ public class LLM_Minigame_ServiceBridge : MonoBehaviour
         yield return new WaitForSeconds(fakeWaitSeconds);
 
         LLM_Minigame_ResponseData response = new LLM_Minigame_ResponseData();
-        response.presetOptions = new string[] { "Answer 1", "Answer 2", "Answer 3" };
+
+        response.presetOptions = new LLM_Minigame_PresetOption[]
+        {
+            new LLM_Minigame_PresetOption
+            {
+                summaryText = "Fire Alarm",
+                fullDialogue = "Listen to me! There is smoke coming from server rack B, open the door now!"
+            },
+            new LLM_Minigame_PresetOption
+            {
+                summaryText = "Badge Audit",
+                fullDialogue = "I am with the external security audit team. Stand aside or I will log an infraction."
+            },
+            new LLM_Minigame_PresetOption
+            {
+                summaryText = "Offer Donut",
+                fullDialogue = "Hey guard, I brought fresh donuts. Mind if I just step inside for five minutes?"
+            }
+        };
 
         string cleanText = string.IsNullOrEmpty(playerText) ? "" : playerText.ToLower().Trim();
 
-        // test case 1: player types win
+        // test case win: awards +50 trust so typing it twice triggers the win screen
         if (cleanText.Contains("win"))
         {
-            response.guardDialogue = "convinced emotion test.";
+            response.guardDialogue = "That explanation actually checks out. Proceed inside.";
             response.emotionKey = "Convinced";
-            response.trustChange = 25f;
+            response.trustChange = 50f;
         }
-        // test case 2: player types lose
+        // test case lose: deducts -20 trust and shakes meter
         else if (cleanText.Contains("lose"))
         {
-            response.guardDialogue = "sus emotion test. minus trust";
+            response.guardDialogue = "That makes no sense at all. Who sent you here?";
             response.emotionKey = "Suspicious";
-            response.trustChange = -15f;
+            response.trustChange = -20f;
         }
-        // test case 3: normal input or game start
         else if (cleanText == "start")
         {
-            response.guardDialogue = "normal input test.";
+            response.guardDialogue = "Halt. State your business at the server room.";
             response.emotionKey = "Neutral";
             response.trustChange = 0f;
         }
         else
         {
-            response.guardDialogue = "thinking test. 123 123 123";
+            response.guardDialogue = "I hear you, but I still need to verify your claim.";
             response.emotionKey = "Thinking";
             response.trustChange = 0f;
         }
@@ -53,6 +70,5 @@ public class LLM_Minigame_ServiceBridge : MonoBehaviour
 
     public void ResetSteps()
     {
-        // empty stub for compatibility
     }
 }

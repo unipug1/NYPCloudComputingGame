@@ -1,17 +1,22 @@
 using System;
 
 [Serializable]
+public class LLM_Minigame_PresetOption
+{
+    // short 2 word text shown on the phone button
+    public string summaryText;
+
+    // full sentence spoken out loud in the player speech bubble
+    public string fullDialogue;
+}
+
+[Serializable]
 public class LLM_Minigame_ResponseData
 {
-    // the text the guard says out loud
     public string guardDialogue;
-
-    // which emotion to show on the character
     public string emotionKey;
-
-    // how much the trust bar goes up or down
     public float trustChange;
 
-    // the 3 preset buttons
-    public string[] presetOptions;
+    // array of the 3 presets with summary and full text
+    public LLM_Minigame_PresetOption[] presetOptions;
 }
