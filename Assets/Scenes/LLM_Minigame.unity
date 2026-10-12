@@ -577,7 +577,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: -583, y: 108}
+  m_AnchoredPosition: {x: -627, y: 262}
   m_SizeDelta: {x: 300, y: 300}
   m_Pivot: {x: 0.82, y: 0.38}
 --- !u!114 &150994779
@@ -5002,7 +5002,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: -5.116}
   m_AnchorMin: {x: 0.5, y: 1}
   m_AnchorMax: {x: 0.5, y: 1}
-  m_AnchoredPosition: {x: 1.9000015, y: 25.4}
+  m_AnchoredPosition: {x: 1.8999939, y: 25.399994}
   m_SizeDelta: {x: 200, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1235421584
@@ -7924,17 +7924,17 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1864322890}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: 0, y: 0, z: -0.258819, w: 0.9659259}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 2035671906}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -30}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 252, y: 0}
-  m_SizeDelta: {x: 200, y: 200}
+  m_AnchoredPosition: {x: 584, y: 193}
+  m_SizeDelta: {x: 500, y: 500}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1864322892
 MonoBehaviour:
@@ -7983,8 +7983,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 120
-  m_fontSizeBase: 120
+  m_fontSize: 200
+  m_fontSizeBase: 200
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -8703,13 +8703,13 @@ MonoBehaviour:
   characterImage: {fileID: 2105048010}
   emotionList:
   - emotionKey: Neutral
-    sprite: {fileID: -2135585597343286014, guid: 5aa8b770bc43046bc8d993d0d5b7f4a5, type: 3}
+    sprite: {fileID: -137972784495506535, guid: 362db5dd369d8314fa46927612d77510, type: 3}
   - emotionKey: Suspicious
-    sprite: {fileID: 3625043607559282579, guid: 19fb86013d8c24d6cb8410c0aadf30fa, type: 3}
+    sprite: {fileID: -4301329749613159308, guid: ab00c157127b1f846beb86640ef58f45, type: 3}
   - emotionKey: Thinking
-    sprite: {fileID: -2413806693520163455, guid: a86470a33a6bf42c4b3595704624658b, type: 3}
+    sprite: {fileID: -6154494665042352654, guid: 3f3bb6d20c6f86d499aaf79994289b0b, type: 3}
   - emotionKey: Convinced
-    sprite: {fileID: -5177388603050735206, guid: 8884154dfe85442a3a3578be807dbcdf, type: 3}
+    sprite: {fileID: 3959362825773075819, guid: a484974a0353e4d47a7621e667f5bd1f, type: 3}
   bounceHeight: 35
   bounceDuration: 0.35
   manpuEffect: {fileID: 150994779}
@@ -9128,7 +9128,7 @@ RectTransform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2035671905}
   m_LocalRotation: {x: -0.0024403743, y: -0.019129572, z: 0.12652168, w: 0.99177635}
-  m_LocalPosition: {x: 0, y: 0, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 4}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -9140,8 +9140,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: -2.21, z: 14.54}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 0, y: 0.5}
-  m_AnchoredPosition: {x: 164, y: -308}
-  m_SizeDelta: {x: 200, y: 300}
+  m_AnchoredPosition: {x: 193, y: -310}
+  m_SizeDelta: {x: 232.4075, y: 338.4088}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &2035671907
 MonoBehaviour:
@@ -9281,10 +9281,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 824313331}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 214.84363, y: -157.54382}
-  m_SizeDelta: {x: -1392.7932, y: -315.0876}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: -833, y: -92}
+  m_SizeDelta: {x: 737, y: 983}
   m_Pivot: {x: 0, y: 0.5}
 --- !u!114 &2105048010
 MonoBehaviour:
@@ -9299,14 +9299,14 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
   m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 0.7783019, b: 0.7783019, a: 1}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
+  m_Sprite: {fileID: -137972784495506535, guid: 362db5dd369d8314fa46927612d77510, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -9336,7 +9336,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: cfabb0440166ab443bba8876756fdfa9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Shadow
-  m_EffectColor: {r: 0, g: 0, b: 0, a: 0.5}
+  m_EffectColor: {r: 0, g: 0, b: 0, a: 1}
   m_EffectDistance: {x: 20, y: -20}
   m_UseGraphicAlpha: 1
 --- !u!1660057539 &9223372036854775807
