@@ -11,6 +11,9 @@ public class LLM_Minigame_UIController : MonoBehaviour
     [SerializeField] private LLM_Minigame_PropController propController;
     [SerializeField] private Button toggleModeButton;
 
+    [Header("Player Speech Bubble")]
+    [SerializeField] private LLM_Minigame_PlayerBubble playerBubble;
+
     [Header("Clipboard Inputs")]
     [SerializeField] private TMP_InputField playerInputField;
     [SerializeField] private Button sendButton;
@@ -26,12 +29,18 @@ public class LLM_Minigame_UIController : MonoBehaviour
     [SerializeField] private float thinkingDotSpeed = 0.35f;
     [SerializeField] private float typeSpeed = 0.03f;
 
-    [Header("5 Attempts Popup")]
-    [SerializeField] private GameObject attemptsPopup;
-    [SerializeField] private Button continueButton;
-    [SerializeField] private Button restartButton;
+    [Header("Modals (Slide Panels)")]
+    [SerializeField] private LLM_Minigame_SlideModal winModal;
+    [SerializeField] private TextMeshProUGUI winTimeText;
+    [SerializeField] private TextMeshProUGUI winAttemptsText;
+    [SerializeField] private TextMeshProUGUI winTakeawayText;
+    [SerializeField] private Button winRestartButton;
 
-    private Action<string> onMessageSubmitted;
+    [SerializeField] private LLM_Minigame_SlideModal attemptsModal;
+    [SerializeField] private Button attemptsRestartButton;
+    [SerializeField] private Button attemptsContinueButton;
+
+    private Action<string> onPlayerSpeaks;
     private Action onContinueChosen;
     private Action onRestartChosen;
 
@@ -39,36 +48,42 @@ public class LLM_Minigame_UIController : MonoBehaviour
     private Coroutine thinkingRoutine;
     private bool isTyping = false;
     private string fullCurrentLine = "";
+    private LLM_Minigame_PresetOption[] currentPresets;
 
-    public void Setup(Action<string> submitCallback, Action continueCallback, Action restartCallback)
+    public void Setup(Action<string> playerSpeakCallback, Action continueCallback, Action restartCallback)
     {
-        onMessageSubmitted = submitCallback;
+        onPlayerSpeaks = playerSpeakCallback;
         onContinueChosen = continueCallback;
         onRestartChosen = restartCallback;
 
         sendButton.onClick.AddListener(OnSendClicked);
-
-        // automatically send when the user presses Enter in the input field
         playerInputField.onSubmit.AddListener((text) => OnSendClicked());
-
         toggleModeButton.onClick.AddListener(OnToggleClicked);
 
-        continueButton.onClick.AddListener(() => onContinueChosen?.Invoke());
-        restartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+        if (winRestartButton != null)
+        {
+            winRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+        }
+
+        if (attemptsRestartButton != null)
+        {
+            attemptsRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+        }
+
+        if (attemptsContinueButton != null)
+        {
+            attemptsContinueButton.onClick.AddListener(() => onContinueChosen?.Invoke());
+        }
 
         for (int i = 0; i < presetButtons.Length; i++)
         {
             int index = i;
             presetButtons[i].onClick.AddListener(() => OnPresetClicked(index));
         }
-
-        focusController.SnapToNPCFocus();
-        attemptsPopup.SetActive(false);
     }
 
     private void Update()
     {
-        // check for both standard Enter (Return) and Numpad Enter
         if (propController.IsClipboardActive() && playerInputField.isFocused)
         {
             if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
@@ -89,21 +104,16 @@ public class LLM_Minigame_UIController : MonoBehaviour
         if (string.IsNullOrEmpty(text)) return;
 
         playerInputField.text = "";
-
-        // shift focus back to guard as waiting begins
-        focusController.TransitionToNPCFocus();
-        onMessageSubmitted?.Invoke(text);
+        onPlayerSpeaks?.Invoke(text);
     }
 
     private void OnPresetClicked(int index)
     {
-        if (index < presetButtonTexts.Length)
+        if (currentPresets != null && index < currentPresets.Length)
         {
-            string chosenText = presetButtonTexts[index].text;
-
-            // shift focus back to guard as waiting begins
-            focusController.TransitionToNPCFocus();
-            onMessageSubmitted?.Invoke(chosenText);
+            // send the full spoken dialogue, not the short button summary
+            string fullSentence = currentPresets[index].fullDialogue;
+            onPlayerSpeaks?.Invoke(fullSentence);
         }
     }
 
@@ -118,18 +128,25 @@ public class LLM_Minigame_UIController : MonoBehaviour
         });
     }
 
-    public void SetPresets(string[] presets)
+    public void SetPresets(LLM_Minigame_PresetOption[] presets)
     {
+        currentPresets = presets;
+
         for (int i = 0; i < presetButtonTexts.Length; i++)
         {
-            if (i < presets.Length)
+            if (presets != null && i < presets.Length)
             {
-                presetButtonTexts[i].text = presets[i];
+                // display short summary on button
+                presetButtonTexts[i].text = presets[i].summaryText;
             }
         }
     }
 
-    // starts or stops the animated grey thinking loop
+    public void PlayPlayerBubble(string dialogue, Action onComplete)
+    {
+        playerBubble.ShowPlayerDialogue(dialogue, onComplete);
+    }
+
     public void SetThinking(bool thinking)
     {
         sendButton.interactable = !thinking;
@@ -157,7 +174,6 @@ public class LLM_Minigame_UIController : MonoBehaviour
         }
     }
 
-    // loops Thinking. to Thinking.. to Thinking... in grey
     private IEnumerator ThinkingDotsRoutine()
     {
         dialogueText.color = thinkingColor;
@@ -176,16 +192,14 @@ public class LLM_Minigame_UIController : MonoBehaviour
         }
     }
 
-    public void DisplayGuardDialogue(string speech)
+    public void DisplayGuardDialogue(string speech, Action onComplete)
     {
-        // stop thinking loop
         if (thinkingRoutine != null)
         {
             StopCoroutine(thinkingRoutine);
             thinkingRoutine = null;
         }
 
-        // switch text back to solid dark color
         dialogueText.color = normalTextColor;
         fullCurrentLine = speech;
 
@@ -193,10 +207,10 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             StopCoroutine(typewriterRoutine);
         }
-        typewriterRoutine = StartCoroutine(TypewriterRoutine(speech));
+        typewriterRoutine = StartCoroutine(TypewriterRoutine(speech, onComplete));
     }
 
-    private IEnumerator TypewriterRoutine(string speech)
+    private IEnumerator TypewriterRoutine(string speech, Action onComplete)
     {
         isTyping = true;
         dialogueText.text = "";
@@ -208,34 +222,37 @@ public class LLM_Minigame_UIController : MonoBehaviour
         }
 
         isTyping = false;
-
-        // guard finished speaking, transition focus to player
-        focusController.TransitionToPlayerFocus();
-        if (propController.IsClipboardActive())
-        {
-            playerInputField.ActivateInputField();
-        }
+        onComplete?.Invoke();
     }
 
-    public void OnDialogueBoxClicked()
+    public void OnDialogueBoxClicked(Action onComplete)
     {
         if (isTyping)
         {
             StopCoroutine(typewriterRoutine);
             dialogueText.text = fullCurrentLine;
             isTyping = false;
-
-            focusController.TransitionToPlayerFocus();
-            if (propController.IsClipboardActive())
-            {
-                playerInputField.ActivateInputField();
-            }
+            onComplete?.Invoke();
         }
     }
 
-    public void ShowAttemptsPopup(bool show)
+    public void ShowWinModal(string timeFormatted, int attemptsUsed, int maxAttempts)
     {
-        attemptsPopup.SetActive(show);
+        if (winTimeText != null) winTimeText.text = timeFormatted;
+        if (winAttemptsText != null) winAttemptsText.text = attemptsUsed + " / " + maxAttempts;
+        if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and casual distraction. Always verify identities before granting access.";
+
+        winModal.SlideIn();
+    }
+
+    public void ShowAttemptsModal(Action onComplete = null)
+    {
+        attemptsModal.SlideIn(onComplete);
+    }
+
+    public void HideAttemptsModal(Action onComplete = null)
+    {
+        attemptsModal.SlideOut(onComplete);
     }
 
     public void ClearAll()
@@ -245,8 +262,19 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
         dialogueText.text = "";
         playerInputField.text = "";
-        attemptsPopup.SetActive(false);
+        ForceHideAllModals();
+    }
 
-        focusController.SnapToNPCFocus();
+    public void ForceHideAllModals()
+    {
+        if (winModal != null)
+        {
+            winModal.SnapHidden();
+        }
+
+        if (attemptsModal != null)
+        {
+            attemptsModal.SnapHidden();
+        }
     }
 }
