@@ -18,7 +18,7 @@ using UnityEngine.UI;
 /// <summary>Builds the inspectable task 3 example using Unity's own scene APIs.</summary>
 public static class Task3SceneSetup
 {
-    public const string ScenePath = "Assets/Scenes/MovementTesting.unity";
+    public const string ScenePath = "Assets/Scenes/MoveAndInteract.unity";
     private const string FontPath = "Assets/TextMesh Pro/Resources/Fonts & Materials/LiberationSans SDF.asset";
     private const string RequestPath = "Temp/CampusTask3.setup-request";
     private const string ResultPath = "Temp/CampusTask3.setup-result.json";
