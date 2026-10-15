@@ -65,16 +65,23 @@ public class DialogueManager : MonoBehaviour
     [SerializeField] private List<GameObject> hudElementsToHide = new List<GameObject>();
 
     [Header("Player Lock Event")]
-    public UnityEvent<bool> onDialogueStateChanged;
+    public UnityEvent<bool> onDialogueStateChanged = new UnityEvent<bool>();
+
+    [Tooltip("Enable when the UI has Continue/Close buttons; other scenes keep click-anywhere input.")]
+    [SerializeField] private bool pointerInputHandledByButtons;
 
     private List<DialogueLine> currentLines = new List<DialogueLine>();
     private int currentLineIndex = 0;
     private bool isDialogueRunning = false;
+    private bool isDialogueClosing;
+    private int dialogueStartedFrame = -1;
+    private int lastAdvanceFrame = -1;
     private bool isTyping = false;
     private bool isWaitingForChoice = false;
     private System.Action onCompleteCallback;
 
     private Coroutine typingRoutine;
+    private Coroutine entryRoutine;
     private Coroutine portraitAnimRoutine;
     private Coroutine portraitDarkRoutine;
     private Coroutine promptBobRoutine;
@@ -89,12 +96,16 @@ public class DialogueManager : MonoBehaviour
     private CanvasGroup[] choiceCanvasGroups;
     private bool hasSavedPositions = false;
 
-    public bool IsDialogueRunning => isDialogueRunning;
+    public bool IsDialogueRunning => isDialogueRunning || isDialogueClosing;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        else
+        {
+            Destroy(gameObject);
+            return;
+        }
 
         // auto detect shadow component on portrait if unassigned
         if (portraitShadow == null && cinematicPortraitImage != null)
@@ -163,31 +174,37 @@ public class DialogueManager : MonoBehaviour
                              Keyboard.current.spaceKey.wasPressedThisFrame;
         }
 
-        if (!advancePressed && Mouse.current != null)
+        if (!advancePressed && !pointerInputHandledByButtons && Mouse.current != null)
         {
             advancePressed = Mouse.current.leftButton.wasPressedThisFrame;
         }
 
         if (advancePressed)
-        {
-            if (isTyping)
-            {
-                CompleteSentenceInstantly();
-            }
-            else
-            {
-                AdvanceToNextLine();
-            }
-        }
+            AdvanceDialogue();
+    }
+
+    // Keyboard input and the Continue button share the same once-per-frame action.
+    public void AdvanceDialogue()
+    {
+        if (!isDialogueRunning || isWaitingForChoice
+            || Time.frameCount == dialogueStartedFrame || Time.frameCount == lastAdvanceFrame)
+            return;
+
+        lastAdvanceFrame = Time.frameCount;
+        if (isTyping)
+            CompleteSentenceInstantly();
+        else
+            AdvanceToNextLine();
     }
 
     public void StartDialogue(List<DialogueLine> lines, System.Action onComplete = null)
     {
-        if (lines == null || lines.Count == 0) return;
+        if (IsDialogueRunning || lines == null || lines.Count == 0) return;
 
         SaveRestingPositions();
 
         isDialogueRunning = true;
+        dialogueStartedFrame = Time.frameCount;
         currentLines = lines;
         currentLineIndex = 0;
         onCompleteCallback = onComplete;
@@ -203,7 +220,7 @@ public class DialogueManager : MonoBehaviour
         if (cinematicRootRect != null) cinematicRootRect.anchoredPosition = cinematicRestingPos;
 
         // only the dialogue box slides up from below
-        StartCoroutine(AnimateDialogueBoxEnter());
+        entryRoutine = StartCoroutine(AnimateDialogueBoxEnter());
         DisplayLine(currentLineIndex);
     }
 
@@ -543,6 +560,8 @@ public class DialogueManager : MonoBehaviour
 
     private void OnChoiceSelected(int jumpToIndex)
     {
+        if (!isDialogueRunning || !isWaitingForChoice) return;
+
         isWaitingForChoice = false;
         if (choiceContainer != null) choiceContainer.SetActive(false);
         FadeDarkPortrait(false);
@@ -601,9 +620,23 @@ public class DialogueManager : MonoBehaviour
 
     public void EndDialogue()
     {
+        if (!isDialogueRunning) return;
+
         isDialogueRunning = false;
+        isDialogueClosing = true;
         isTyping = false;
         isWaitingForChoice = false;
+
+        if (typingRoutine != null)
+        {
+            StopCoroutine(typingRoutine);
+            typingRoutine = null;
+        }
+        if (entryRoutine != null)
+        {
+            StopCoroutine(entryRoutine);
+            entryRoutine = null;
+        }
 
         SetContinuePromptActive(false);
         FadeDarkPortrait(false);
@@ -612,6 +645,7 @@ public class DialogueManager : MonoBehaviour
         StartCoroutine(AnimateCinematicExit(() =>
         {
             HideAllDialogueUI();
+            isDialogueClosing = false;
             onDialogueStateChanged?.Invoke(false);
             SetHUDVisibility(true);
             onCompleteCallback?.Invoke();
@@ -626,6 +660,15 @@ public class DialogueManager : MonoBehaviour
             {
                 hudElementsToHide[i].SetActive(visible);
             }
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (Instance == this)
+        {
+            onDialogueStateChanged?.Invoke(false);
+            Instance = null;
         }
     }
 }
