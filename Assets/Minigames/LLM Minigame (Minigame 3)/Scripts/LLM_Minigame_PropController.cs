@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using Image = UnityEngine.UI.Image;
@@ -12,24 +13,25 @@ public class LLM_Minigame_PropController : MonoBehaviour
         public string name;
         public RectTransform rect;
         public UnityEngine.UI.Image shadowOverlay;
+        public LLM_Minigame_PropMotionBlur motionBlur;
 
-        [Header("Available Pose (Player Turn - Ready)")]
+        [Header("available pose")]
         public Vector3 availablePos;
         public float availableRotZ;
         public Vector3 availableScale = Vector3.one;
 
-        [Header("Unavailable Pose (Guard Speaking - Off Focus)")]
+        [Header("unavailable pose")]
         public Vector3 unavailablePos;
         public float unavailableRotZ;
         public Vector3 unavailableScale = Vector3.one;
 
-        [Header("Switch Offscreen Pose (Swap Animation Exit/Entry)")]
+        [Header("switch offscreen pose")]
         public Vector3 switchOffscreenPos;
         public float switchOffscreenRotZ;
         public Vector3 switchOffscreenScale = Vector3.one;
     }
 
-    [Header("Props Configuration")]
+    [Header("props configuration")]
     [SerializeField]
     private PropData clipboard = new PropData
     {
@@ -37,11 +39,9 @@ public class LLM_Minigame_PropController : MonoBehaviour
         availablePos = new Vector3(13f, -65f, 0f),
         availableRotZ = 8f,
         availableScale = Vector3.one,
-
         unavailablePos = new Vector3(216f, -686f, 0f),
         unavailableRotZ = -8f,
         unavailableScale = new Vector3(0.1f, 0.1f, 1f),
-
         switchOffscreenPos = new Vector3(450f, -900f, 0f),
         switchOffscreenRotZ = -25f,
         switchOffscreenScale = Vector3.one
@@ -54,68 +54,162 @@ public class LLM_Minigame_PropController : MonoBehaviour
         availablePos = new Vector3(-44f, -35f, 0f),
         availableRotZ = -7f,
         availableScale = Vector3.one,
-
         unavailablePos = new Vector3(242f, -383f, 0f),
         unavailableRotZ = -21f,
         unavailableScale = new Vector3(0.9f, 0.9f, 1f),
-
         switchOffscreenPos = new Vector3(450f, -900f, 0f),
         switchOffscreenRotZ = 20f,
         switchOffscreenScale = Vector3.one
     };
 
-    [Header("Shadow Settings")]
+    [Header("shadow settings")]
     [SerializeField] private float dimAlpha = 0.5f;
 
-    [Header("Focus Transition Settings (Dialogue / Turns)")]
-    [SerializeField] private float focusDuration = 0.3f;
+    [Header("animation settings")]
+    [SerializeField] private float focusDuration = 0.35f;
+    [SerializeField] private float switchOutDuration = 0.2f;
+    [SerializeField] private float switchInDuration = 0.24f;
+    [SerializeField] private AnimationCurve switchCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
     [SerializeField] private AnimationCurve focusCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
-    [Header("Switch Transition Settings (Prop Swapping)")]
-    [SerializeField] private float switchOutDuration = 0.2f;
-    [SerializeField] private float switchInDuration = 0.22f;
-    [SerializeField] private AnimationCurve switchCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
-
     private bool isClipboardActive = true;
-    private bool isPlayerTurn = false;
     private bool isSwitching = false;
     private Coroutine propRoutine;
+    private Coroutine typeRoutine;
 
-    public bool IsClipboardActive()
-    {
-        return isClipboardActive;
-    }
+    public bool IsClipboardActive() => isClipboardActive;
+    public PropData GetCurrentProp() => isClipboardActive ? clipboard : phone;
 
-    public PropData GetCurrentProp()
-    {
-        return isClipboardActive ? clipboard : phone;
-    }
+    // returns true if any prop movement is currently playing
+    public bool IsAnimating() => propRoutine != null || isSwitching;
 
     public void SetupInitialState()
     {
-        isClipboardActive = true;
-        isPlayerTurn = false;
-        isSwitching = false;
+        StopCurrentRoutine();
 
-        // clipboard starts in unavailable pose because guard speaks first
+        isClipboardActive = true;
+
         clipboard.rect.gameObject.SetActive(true);
         ApplyPoseInstant(clipboard, clipboard.unavailablePos, clipboard.unavailableRotZ, clipboard.unavailableScale);
         SetShadowInstant(clipboard, dimAlpha, true);
 
-        // phone starts put away completely
         phone.rect.gameObject.SetActive(false);
         ApplyPoseInstant(phone, phone.switchOffscreenPos, phone.switchOffscreenRotZ, phone.switchOffscreenScale);
         SetShadowInstant(phone, 0f, false);
     }
 
-    // called when player submits answer: prop slides all the way out offscreen
-    public void SwitchOutActiveProp(Action onComplete)
+    private void StopCurrentRoutine()
     {
-        PropData activeProp = GetCurrentProp();
-
         if (propRoutine != null)
         {
             StopCoroutine(propRoutine);
+            propRoutine = null;
+        }
+
+        isSwitching = false;
+
+        if (clipboard.motionBlur != null) clipboard.motionBlur.ResetBlur();
+        if (phone.motionBlur != null) phone.motionBlur.ResetBlur();
+    }
+
+    public void TransitionUnavailableToActive(Action onComplete = null)
+    {
+        StopCurrentRoutine();
+
+        PropData prop = GetCurrentProp();
+        prop.rect.gameObject.SetActive(true);
+
+        if (prop.motionBlur != null) prop.motionBlur.TriggerBlur(focusDuration);
+        propRoutine = StartCoroutine(UnavailableToActiveRoutine(prop, onComplete));
+    }
+
+    private IEnumerator UnavailableToActiveRoutine(PropData prop, Action onComplete)
+    {
+        Vector3 startPos = prop.rect.anchoredPosition;
+        float startRot = prop.rect.localEulerAngles.z;
+        Vector3 startScale = prop.rect.localScale;
+
+        float timer = 0f;
+        while (timer < focusDuration)
+        {
+            timer += Time.deltaTime;
+            float progress = focusCurve.Evaluate(Mathf.Clamp01(timer / focusDuration));
+
+            prop.rect.anchoredPosition = Vector3.LerpUnclamped(startPos, prop.availablePos, progress);
+            prop.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(startRot, prop.availableRotZ, progress));
+            prop.rect.localScale = Vector3.LerpUnclamped(startScale, prop.availableScale, progress);
+
+            if (prop.shadowOverlay != null)
+            {
+                Color c = prop.shadowOverlay.color;
+                c.a = Mathf.Lerp(dimAlpha, 0f, progress);
+                prop.shadowOverlay.color = c;
+            }
+
+            yield return null;
+        }
+
+        ApplyPoseInstant(prop, prop.availablePos, prop.availableRotZ, prop.availableScale);
+        SetShadowInstant(prop, 0f, false);
+
+        propRoutine = null;
+        onComplete?.Invoke();
+    }
+
+    public void TransitionActiveToUnavailable(Action onComplete = null)
+    {
+        StopCurrentRoutine();
+
+        PropData prop = GetCurrentProp();
+        prop.rect.gameObject.SetActive(true);
+
+        if (prop.motionBlur != null) prop.motionBlur.TriggerBlur(focusDuration);
+        propRoutine = StartCoroutine(ActiveToUnavailableRoutine(prop, onComplete));
+    }
+
+    private IEnumerator ActiveToUnavailableRoutine(PropData prop, Action onComplete)
+    {
+        Vector3 startPos = prop.rect.anchoredPosition;
+        float startRot = prop.rect.localEulerAngles.z;
+        Vector3 startScale = prop.rect.localScale;
+
+        if (prop.shadowOverlay != null) prop.shadowOverlay.raycastTarget = true;
+
+        float timer = 0f;
+        while (timer < focusDuration)
+        {
+            timer += Time.deltaTime;
+            float progress = focusCurve.Evaluate(Mathf.Clamp01(timer / focusDuration));
+
+            prop.rect.anchoredPosition = Vector3.LerpUnclamped(startPos, prop.unavailablePos, progress);
+            prop.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(startRot, prop.unavailableRotZ, progress));
+            prop.rect.localScale = Vector3.LerpUnclamped(startScale, prop.unavailableScale, progress);
+
+            if (prop.shadowOverlay != null)
+            {
+                Color c = prop.shadowOverlay.color;
+                c.a = Mathf.Lerp(0f, dimAlpha, progress);
+                prop.shadowOverlay.color = c;
+            }
+
+            yield return null;
+        }
+
+        ApplyPoseInstant(prop, prop.unavailablePos, prop.unavailableRotZ, prop.unavailableScale);
+        SetShadowInstant(prop, dimAlpha, true);
+
+        propRoutine = null;
+        onComplete?.Invoke();
+    }
+
+    public void SwitchOutActiveProp(Action onComplete)
+    {
+        StopCurrentRoutine();
+
+        PropData activeProp = GetCurrentProp();
+        if (activeProp.rect.gameObject.activeInHierarchy && activeProp.motionBlur != null)
+        {
+            activeProp.motionBlur.TriggerBlur(switchOutDuration);
         }
 
         propRoutine = StartCoroutine(SwitchOutRoutine(activeProp, onComplete));
@@ -143,76 +237,76 @@ public class LLM_Minigame_PropController : MonoBehaviour
         ApplyPoseInstant(prop, prop.switchOffscreenPos, prop.switchOffscreenRotZ, prop.switchOffscreenScale);
         prop.rect.gameObject.SetActive(false);
 
+        propRoutine = null;
         onComplete?.Invoke();
     }
 
-    // called when dialogue finishes or when player bubble closes to return prop
-    public void SetFocusState(bool toPlayerTurn)
+    public void SwitchInActiveProp(Action onComplete = null)
     {
-        isPlayerTurn = toPlayerTurn;
-
-        if (isSwitching) return;
+        StopCurrentRoutine();
 
         PropData activeProp = GetCurrentProp();
+        activeProp.rect.gameObject.SetActive(true);
 
-        if (propRoutine != null)
-        {
-            StopCoroutine(propRoutine);
-        }
-
-        propRoutine = StartCoroutine(AnimatePropFocus(activeProp, toPlayerTurn));
+        if (activeProp.motionBlur != null) activeProp.motionBlur.TriggerBlur(switchInDuration);
+        propRoutine = StartCoroutine(SwitchInRoutine(activeProp, onComplete));
     }
 
-    private IEnumerator AnimatePropFocus(PropData prop, bool toAvailable)
+    private IEnumerator SwitchInRoutine(PropData prop, Action onComplete)
     {
-        // re-activate the prop in case it was hidden while player bubble was talking
-        prop.rect.gameObject.SetActive(true);
-
-        Vector3 targetPos = toAvailable ? prop.availablePos : prop.unavailablePos;
-        float targetRot = toAvailable ? prop.availableRotZ : prop.unavailableRotZ;
-        Vector3 targetScale = toAvailable ? prop.availableScale : prop.unavailableScale;
-        float targetAlpha = toAvailable ? 0f : dimAlpha;
-
-        Vector3 startPos = prop.rect.anchoredPosition;
-        float startRot = prop.rect.localEulerAngles.z;
-        Vector3 startScale = prop.rect.localScale;
-        float startAlpha = prop.shadowOverlay != null ? prop.shadowOverlay.color.a : 0f;
-
-        // block clicks when unavailable, allow when available
-        if (prop.shadowOverlay != null)
-        {
-            prop.shadowOverlay.raycastTarget = !toAvailable;
-        }
+        ApplyPoseInstant(prop, prop.switchOffscreenPos, prop.switchOffscreenRotZ, prop.switchOffscreenScale);
+        SetShadowInstant(prop, 0f, false);
 
         float timer = 0f;
-        while (timer < focusDuration)
+        while (timer < switchInDuration)
         {
             timer += Time.deltaTime;
-            float rawProgress = Mathf.Clamp01(timer / focusDuration);
-            float progress = focusCurve.Evaluate(rawProgress);
+            float progress = switchCurve.Evaluate(Mathf.Clamp01(timer / switchInDuration));
 
-            prop.rect.anchoredPosition = Vector3.LerpUnclamped(startPos, targetPos, progress);
-            prop.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(startRot, targetRot, progress));
-            prop.rect.localScale = Vector3.LerpUnclamped(startScale, targetScale, progress);
-
-            if (prop.shadowOverlay != null)
-            {
-                Color c = prop.shadowOverlay.color;
-                c.a = Mathf.Lerp(startAlpha, targetAlpha, progress);
-                prop.shadowOverlay.color = c;
-            }
-
+            prop.rect.anchoredPosition = Vector3.LerpUnclamped(prop.switchOffscreenPos, prop.availablePos, progress);
+            prop.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(prop.switchOffscreenRotZ, prop.availableRotZ, progress));
+            prop.rect.localScale = Vector3.LerpUnclamped(prop.switchOffscreenScale, prop.availableScale, progress);
             yield return null;
         }
 
-        ApplyPoseInstant(prop, targetPos, targetRot, targetScale);
-        SetShadowInstant(prop, targetAlpha, !toAvailable);
+        ApplyPoseInstant(prop, prop.availablePos, prop.availableRotZ, prop.availableScale);
+        SetShadowInstant(prop, 0f, false);
+
+        propRoutine = null;
+        onComplete?.Invoke();
     }
 
-    // called when player toggles between clipboard and phone
+    public void SelectPhonePresetToClipboard(string fullText, TMP_InputField inputField, Action onFinished = null)
+    {
+        if (IsAnimating()) return;
+
+        ToggleProps(() =>
+        {
+            if (typeRoutine != null) StopCoroutine(typeRoutine);
+            typeRoutine = StartCoroutine(RapidTypeRoutine(fullText, inputField, onFinished));
+        });
+    }
+
+    private IEnumerator RapidTypeRoutine(string text, TMP_InputField inputField, Action onFinished)
+    {
+        inputField.text = "";
+        inputField.interactable = false;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            inputField.text += text[i];
+            inputField.caretPosition = inputField.text.Length;
+            yield return new WaitForSeconds(0.015f);
+        }
+
+        inputField.interactable = true;
+        inputField.ActivateInputField();
+        onFinished?.Invoke();
+    }
+
     public void ToggleProps(Action onComplete = null)
     {
-        if (!isPlayerTurn || isSwitching) return;
+        if (IsAnimating()) return;
 
         isSwitching = true;
         bool switchingToPhone = isClipboardActive;
@@ -221,17 +315,24 @@ public class LLM_Minigame_PropController : MonoBehaviour
         PropData outgoing = switchingToPhone ? clipboard : phone;
         PropData incoming = switchingToPhone ? phone : clipboard;
 
-        if (propRoutine != null)
+        incoming.rect.gameObject.SetActive(true);
+
+        if (outgoing.rect.gameObject.activeInHierarchy && outgoing.motionBlur != null)
         {
-            StopCoroutine(propRoutine);
+            outgoing.motionBlur.TriggerBlur(switchOutDuration);
         }
 
+        if (incoming.motionBlur != null)
+        {
+            incoming.motionBlur.TriggerBlur(switchInDuration);
+        }
+
+        if (propRoutine != null) StopCoroutine(propRoutine);
         propRoutine = StartCoroutine(TwoPhaseSwapRoutine(outgoing, incoming, onComplete));
     }
 
     private IEnumerator TwoPhaseSwapRoutine(PropData outgoing, PropData incoming, Action onComplete)
     {
-        // phase 1: outgoing prop exits to offscreen pose
         Vector3 outStartPos = outgoing.rect.anchoredPosition;
         float outStartRot = outgoing.rect.localEulerAngles.z;
         Vector3 outStartScale = outgoing.rect.localScale;
@@ -240,21 +341,17 @@ public class LLM_Minigame_PropController : MonoBehaviour
         while (timer < switchOutDuration)
         {
             timer += Time.deltaTime;
-            float rawProgress = Mathf.Clamp01(timer / switchOutDuration);
-            float progress = switchCurve.Evaluate(rawProgress);
+            float progress = switchCurve.Evaluate(Mathf.Clamp01(timer / switchOutDuration));
 
             outgoing.rect.anchoredPosition = Vector3.LerpUnclamped(outStartPos, outgoing.switchOffscreenPos, progress);
             outgoing.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(outStartRot, outgoing.switchOffscreenRotZ, progress));
             outgoing.rect.localScale = Vector3.LerpUnclamped(outStartScale, outgoing.switchOffscreenScale, progress);
-
             yield return null;
         }
 
         ApplyPoseInstant(outgoing, outgoing.switchOffscreenPos, outgoing.switchOffscreenRotZ, outgoing.switchOffscreenScale);
         outgoing.rect.gameObject.SetActive(false);
 
-        // phase 2: incoming prop enters from offscreen pose into available pose
-        incoming.rect.gameObject.SetActive(true);
         ApplyPoseInstant(incoming, incoming.switchOffscreenPos, incoming.switchOffscreenRotZ, incoming.switchOffscreenScale);
         SetShadowInstant(incoming, 0f, false);
 
@@ -262,13 +359,11 @@ public class LLM_Minigame_PropController : MonoBehaviour
         while (timer < switchInDuration)
         {
             timer += Time.deltaTime;
-            float rawProgress = Mathf.Clamp01(timer / switchInDuration);
-            float progress = switchCurve.Evaluate(rawProgress);
+            float progress = switchCurve.Evaluate(Mathf.Clamp01(timer / switchInDuration));
 
             incoming.rect.anchoredPosition = Vector3.LerpUnclamped(incoming.switchOffscreenPos, incoming.availablePos, progress);
             incoming.rect.localRotation = Quaternion.Euler(0f, 0f, Mathf.LerpAngle(incoming.switchOffscreenRotZ, incoming.availableRotZ, progress));
             incoming.rect.localScale = Vector3.LerpUnclamped(incoming.switchOffscreenScale, incoming.availableScale, progress);
-
             yield return null;
         }
 
@@ -276,6 +371,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         SetShadowInstant(incoming, 0f, false);
 
         isSwitching = false;
+        propRoutine = null;
         onComplete?.Invoke();
     }
 
