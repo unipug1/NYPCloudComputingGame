@@ -103199,7 +103199,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::MinimapManager
   mapUIPanel: {fileID: 227137625}
   roomDropdown: {fileID: 1376685746}
+  minimapRect: {fileID: 227137626}
+  smallMinimap: {fileID: 656177976}
   minimapCamera: {fileID: 1391310253}
+  mapCamera: {fileID: 1391310250}
   zoomStep: 1
   allRooms:
   - {fileID: 22156220}
@@ -103207,6 +103210,8 @@ MonoBehaviour:
   - {fileID: 1078318811}
   - {fileID: 1322842031}
   currentRoom: {fileID: 22156220}
+  worldMin: {x: -150, y: -150}
+  worldMax: {x: 150, y: 150}
 --- !u!1 &1846457328
 GameObject:
   m_ObjectHideFlags: 0
