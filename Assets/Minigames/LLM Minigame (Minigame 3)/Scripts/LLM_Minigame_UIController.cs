@@ -85,14 +85,12 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
     public void Setup(
         Action<string> playerSpeakCallback,
-        Action continueCallback,
         Action restartCallback,
         Action reviewCallback,
         Action tabCallback,
         Func<bool> canInteractCheck)
     {
         onPlayerSpeaks = playerSpeakCallback;
-        onContinueChosen = continueCallback;
         onRestartChosen = restartCallback;
         onReviewRequested = reviewCallback;
         onTabPressedRequested = tabCallback;
@@ -518,5 +516,29 @@ public class LLM_Minigame_UIController : MonoBehaviour
         DeactivateInputField();
         UpdateHotkeyPrompt("");
         ForceHideAllModals();
+    }
+
+    // displays dialogue immediately without typewriter (used on restarts)
+    public void DisplayGuardDialogueInstant(string speech)
+    {
+        if (thinkingRoutine != null)
+        {
+            StopCoroutine(thinkingRoutine);
+            thinkingRoutine = null;
+        }
+
+        dialogueText.color = normalTextColor;
+        fullCurrentLine = speech;
+        dialogueText.text = speech;
+        dialogueText.ForceMeshUpdate();
+        dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
+    }
+
+    public void ShowWinModal(string timeFormatted)
+    {
+        if (winTimeText != null) winTimeText.text = timeFormatted;
+        if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and distraction. Always verify identities before granting access.";
+
+        winModal.SlideIn();
     }
 }

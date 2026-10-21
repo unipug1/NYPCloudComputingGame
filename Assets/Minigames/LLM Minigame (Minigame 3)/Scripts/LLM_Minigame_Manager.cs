@@ -7,7 +7,8 @@ public enum LLM_Minigame_State
     PlayerInput,
     PlayerSpeaking,
     NPCThinking,
-    AttemptsUpModal,
+    DeadEndModal,
+    ResetConfirmModal,
     GameWonModal,
     TransitionLock
 }
@@ -23,29 +24,36 @@ public class LLM_Minigame_Manager : MonoBehaviour
     [SerializeField] private LLM_Minigame_PropController propController;
     [SerializeField] private LLM_Minigame_PlayerBubble playerBubble;
 
+    [Header("rainbow reason text")]
+    [SerializeField] private LLM_Minigame_RainbowText rainbowReasonText;
+
+    [Header("modals")]
+    [SerializeField] private LLM_Minigame_DeadEndModal deadEndModal;
+    [SerializeField] private LLM_Minigame_ResetConfirmModal resetConfirmModal;
+
     [Header("intro and screen transitions")]
     [SerializeField] private LLM_Minigame_WarningBar warningBar;
     [SerializeField] private LLM_Minigame_ScreenFader screenFader;
 
-    [Header("settings")]
-    [SerializeField] private int maxAttempts = 5;
-
     private LLM_Minigame_State currentState;
-    private int attemptsUsed = 0;
-    private bool unlimitedMode = false;
-    private bool hasShownAttemptsModal = false;
+    private LLM_Minigame_State stateBeforeConfirm;
+
+    private string currentLockedReason = "";
 
     private float elapsedTime = 0f;
     private bool isTimerRunning = false;
     private string lastSubmittedPlayerText = "";
     private bool isReviewOpen = false;
 
+    private bool isFirstBoot = true;
+    private bool deadEndIgnoredThisSession = false;
+
     private void Start()
     {
+        isFirstBoot = true;
         uiController.Setup(
             OnPlayerSubmittedAnswer,
-            OnContinueChosen,
-            OnRestartChosen,
+            OnRestartConfirmed,
             OnReviewToggleRequested,
             OnTabRequested,
             CanPlayerInteract
@@ -63,7 +71,7 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.R) && !uiController.IsInputFieldFocused() && currentState != LLM_Minigame_State.TransitionLock)
         {
-            OnRestartChosen();
+            RequestResetConfirmation();
         }
     }
 
@@ -95,16 +103,20 @@ public class LLM_Minigame_Manager : MonoBehaviour
     {
         isTimerRunning = false;
         elapsedTime = 0f;
-        attemptsUsed = 0;
-        unlimitedMode = false;
-        hasShownAttemptsModal = false;
         lastSubmittedPlayerText = "";
         isReviewOpen = false;
+        deadEndIgnoredThisSession = false;
 
         bridge.ResetSteps();
         trustMeter.ResetTrust();
         uiController.ClearAll();
+
+        currentLockedReason = "";
+        if (rainbowReasonText != null) rainbowReasonText.SetReasonTag("");
+        if (deadEndModal != null) deadEndModal.SnapClosed();
+        if (resetConfirmModal != null) resetConfirmModal.SnapClosed();
         if (playerBubble != null) playerBubble.SnapClosed();
+
         characterView.ResetCharacter("Neutral");
         propController.SetupInitialState();
         focusController.SnapToNPCFocus();
@@ -121,7 +133,17 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
         SetState(LLM_Minigame_State.NPCSpeaking);
         uiController.UpdateHotkeyPrompt("");
-        uiController.DisplayGuardDialogue(openingData.guardDialogue, OnOpeningDialogueFinished);
+
+        if (isFirstBoot)
+        {
+            isFirstBoot = false;
+            uiController.DisplayGuardDialogue(openingData.guardDialogue, OnOpeningDialogueFinished);
+        }
+        else
+        {
+            uiController.DisplayGuardDialogueInstant(openingData.guardDialogue);
+            OnOpeningDialogueFinished();
+        }
     }
 
     private void OnOpeningDialogueFinished()
@@ -145,10 +167,10 @@ public class LLM_Minigame_Manager : MonoBehaviour
         if (!CanPlayerInteract()) return;
 
         lastSubmittedPlayerText = spokenDialogue;
-        attemptsUsed++;
         SetState(LLM_Minigame_State.PlayerSpeaking);
         uiController.UpdateHotkeyPrompt("");
 
+        // prop slides out first, then single API request is dispatched
         propController.SwitchOutActiveProp(() =>
         {
             playerBubble.ShowPlayerDialogue(spokenDialogue, true);
@@ -158,15 +180,20 @@ public class LLM_Minigame_Manager : MonoBehaviour
             uiController.SetThinking(true);
 
             float currentTrust = trustMeter != null ? trustMeter.GetCurrentTrust() : 10f;
-            bridge.SendPlayerMessage(lastSubmittedPlayerText, currentTrust, OnGuardResponseReceived);
+            bridge.SendPlayerMessage(lastSubmittedPlayerText, currentTrust, currentLockedReason, OnGuardResponseReceived);
         });
     }
 
     private void OnGuardResponseReceived(LLM_Minigame_ResponseData response)
     {
         uiController.SetThinking(false);
-
         characterView.ApplyEmotion(response.emotionKey);
+
+        if (!string.IsNullOrEmpty(response.reasonTag))
+        {
+            currentLockedReason = response.reasonTag;
+            if (rainbowReasonText != null) rainbowReasonText.SetReasonTag(currentLockedReason);
+        }
 
         if (response.presetOptions != null && response.presetOptions.Length > 0)
         {
@@ -179,9 +206,46 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
         uiController.DisplayGuardDialogue(response.guardDialogue, () =>
         {
-            uiController.ShowContinuePrompt();
-            playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
+            if (response.isDeadEnd && !deadEndIgnoredThisSession)
+            {
+                TriggerDeadEndModal(response.deadEndReason);
+            }
+            else
+            {
+                uiController.ShowContinuePrompt();
+                playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
+            }
         });
+    }
+
+    private void TriggerDeadEndModal(string deadEndExplanation)
+    {
+        SetState(LLM_Minigame_State.DeadEndModal);
+        uiController.UpdateHotkeyPrompt("");
+
+        string explanation = string.IsNullOrEmpty(deadEndExplanation)
+            ? "Your story has fallen apart. Mr. Tan caught you in a contradiction."
+            : deadEndExplanation;
+
+        deadEndModal.ShowModal(
+            explanation,
+            onContinue: () =>
+            {
+                deadEndIgnoredThisSession = true;
+                deadEndModal.HideModal(() =>
+                {
+                    uiController.ShowContinuePrompt();
+                    playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
+                });
+            },
+            onRestart: () =>
+            {
+                deadEndModal.HideModal(() =>
+                {
+                    RequestResetConfirmation();
+                });
+            }
+        );
     }
 
     private void OnPlayerBubbleDismissed()
@@ -191,12 +255,6 @@ public class LLM_Minigame_Manager : MonoBehaviour
         if (trustMeter.GetCurrentTrust() >= 100f)
         {
             TriggerWin();
-            return;
-        }
-
-        if (!unlimitedMode && attemptsUsed >= maxAttempts && !hasShownAttemptsModal)
-        {
-            TriggerAttemptsExhausted();
             return;
         }
 
@@ -215,24 +273,20 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
     public void OnTabRequested()
     {
-        // block tab if review dialogue is active or if any animation is running
         if (isReviewOpen || !CanPlayerInteract()) return;
-
         uiController.ExecutePropToggle();
     }
 
     public void OnReviewToggleRequested()
     {
-        // if review is open and stable, close it
+        if (!CanPlayerInteract()) return;
+
         if (isReviewOpen)
         {
-            if (playerBubble != null && playerBubble.IsAnimating()) return;
             CloseReview();
             return;
         }
 
-        // if opening review, ensure nothing else is animating
-        if (!CanPlayerInteract()) return;
         if (string.IsNullOrEmpty(lastSubmittedPlayerText)) return;
 
         isReviewOpen = true;
@@ -244,7 +298,6 @@ public class LLM_Minigame_Manager : MonoBehaviour
             playerBubble.ReopenForReview(
                 onClosed: () =>
                 {
-                    // callback fires when bubble dismisses naturally via click
                     FinishClosingReview();
                 },
                 onSettled: () =>
@@ -264,7 +317,6 @@ public class LLM_Minigame_Manager : MonoBehaviour
         playerBubble.DismissBubble();
     }
 
-    // restores active prop once review bubble has fully closed
     private void FinishClosingReview()
     {
         isReviewOpen = false;
@@ -281,54 +333,34 @@ public class LLM_Minigame_Manager : MonoBehaviour
         });
     }
 
-    private void TriggerWin()
+    public void RequestResetConfirmation()
     {
-        isTimerRunning = false;
-        SetState(LLM_Minigame_State.GameWonModal);
-
-        int minutes = Mathf.FloorToInt(elapsedTime / 60f);
-        int seconds = Mathf.FloorToInt(elapsedTime % 60f);
-        string formattedTime = string.Format("{0:00}:{1:00}", minutes, seconds);
-
-        uiController.ShowWinModal(formattedTime, attemptsUsed, maxAttempts);
-    }
-
-    private void TriggerAttemptsExhausted()
-    {
-        hasShownAttemptsModal = true;
-        SetState(LLM_Minigame_State.TransitionLock);
-
-        uiController.ShowAttemptsModal(() =>
+        if (currentState == LLM_Minigame_State.ResetConfirmModal || currentState == LLM_Minigame_State.TransitionLock)
         {
-            SetState(LLM_Minigame_State.AttemptsUpModal);
-        });
-    }
+            return;
+        }
 
-    private void OnContinueChosen()
-    {
-        if (currentState != LLM_Minigame_State.AttemptsUpModal) return;
+        stateBeforeConfirm = currentState;
+        SetState(LLM_Minigame_State.ResetConfirmModal);
+        uiController.UpdateHotkeyPrompt("");
 
-        SetState(LLM_Minigame_State.TransitionLock);
-
-        uiController.HideAttemptsModal(() =>
+        if (resetConfirmModal != null)
         {
-            unlimitedMode = true;
-            SetState(LLM_Minigame_State.PlayerInput);
-            focusController.TransitionToPlayerFocus();
-            propController.SwitchInActiveProp(() =>
-            {
-                if (propController.IsClipboardActive())
-                {
-                    uiController.FocusInputFieldSafe();
-                }
-
-                uiController.RefreshPromptState();
-            });
-        });
+            resetConfirmModal.Show(
+                confirmCallback: OnRestartConfirmed,
+                cancelCallback: OnRestartCancelled
+            );
+        }
+        else
+        {
+            OnRestartConfirmed();
+        }
     }
 
-    private void OnRestartChosen()
+    private void OnRestartConfirmed()
     {
+        if (resetConfirmModal != null) resetConfirmModal.SnapClosed();
+
         SetState(LLM_Minigame_State.TransitionLock);
 
         if (screenFader != null)
@@ -358,22 +390,42 @@ public class LLM_Minigame_Manager : MonoBehaviour
         }
     }
 
+    private void OnRestartCancelled()
+    {
+        if (resetConfirmModal != null) resetConfirmModal.Hide();
+        SetState(stateBeforeConfirm);
+
+        if (currentState == LLM_Minigame_State.PlayerInput)
+        {
+            uiController.RefreshPromptState();
+            if (propController.IsClipboardActive())
+            {
+                uiController.FocusInputFieldSafe();
+            }
+        }
+    }
+
+    private void TriggerWin()
+    {
+        isTimerRunning = false;
+        SetState(LLM_Minigame_State.GameWonModal);
+
+        int minutes = Mathf.FloorToInt(elapsedTime / 60f);
+        int seconds = Mathf.FloorToInt(elapsedTime % 60f);
+        string formattedTime = string.Format("{0:00}:{1:00}", minutes, seconds);
+
+        uiController.ShowWinModal(formattedTime);
+    }
+
     public void OnDialogueBoxClicked()
     {
         if (currentState == LLM_Minigame_State.NPCSpeaking)
         {
-            if (attemptsUsed == 0 && !isTimerRunning)
+            uiController.OnDialogueBoxClicked(() =>
             {
-                uiController.OnDialogueBoxClicked(OnOpeningDialogueFinished);
-            }
-            else
-            {
-                uiController.OnDialogueBoxClicked(() =>
-                {
-                    uiController.ShowContinuePrompt();
-                    playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
-                });
-            }
+                uiController.ShowContinuePrompt();
+                playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
+            });
         }
     }
 

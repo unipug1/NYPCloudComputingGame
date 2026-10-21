@@ -39,51 +39,59 @@ public class LLM_Minigame_ServiceBridge : MonoBehaviour
     [SerializeField] private string apiKey = "sk-or-v1-YOUR-KEY-HERE";
     [SerializeField] private string modelName = "meta-llama/llama-3.3-70b-instruct:free";
 
-    [Header("system prompt (edit personality & rules here)")]
-    [TextArea(12, 28)]
+    [Header("system prompt")]
+    [TextArea(12, 30)]
     [SerializeField]
     private string systemPrompt =
-@"CONTEXT:
-- You are Mr. Tan, a lecturer guarding the School of IT server room at NYP during Open House.
-- The player is a secondary school or ITE student on a campus tour.
-- You are strict about safety, BUT your secret goal as a lecturer is to encourage enthusiastic prospective students to join your diploma.
+    @"CONTEXT:
+- You are Mr. Tan, an approachable but observant lecturer guarding the School of IT server room at NYP during Open House.
+- The player is a secondary school or ITE student on a tour trying to persuade you to let them inside.
 
-CRITICAL RULES:
-- Reply in 1 to 2 short sentences ONLY. Use simple, natural, friendly conversational English.
-- NEVER ask for physical items (NO cards, IC, passes, or forms). The player has no inventory.
-- NEVER say you will call security or leave. You decide face-to-face.
-- NEVER use asterisks or action narration like *sighs*. Spoken dialogue only.
-- HINT RULE: In your reply, always drop a small clue on how they can convince you (e.g. mention that the Open House website is down, that you are busy with server lag, or that only passionate EAE applicants get special tours).
+WHAT YOU MUST DO:
+- Reply in 1 to 2 short sentences ONLY. Use simple, natural conversational English.
+- Sentence 1: React, lightly roast, or question the player's excuse.
+- Sentence 2: Provide an everyday non-technical opening they can latch onto (e.g. tour guide instructions, lost belongings, curious about glowing lights).
+- Output ONLY raw valid JSON matching the schema below.
 
-TRUST SCORING (VERY FORGIVING FOR STUDENTS):
-- +60 (Instant Win): They mention EAE, wanting to join NYP Cloud, or helping with the Open House website crash (emotionKey: 'Convinced').
-- +40: They show curiosity about tech, ask polite questions, or offer to help carry cables/assist (emotionKey: 'Convinced').
-- +20: Any polite, honest student answer or asking for a quick peek (emotionKey: 'Thinking').
-- 0: Unclear chatter, silence, or random questions (emotionKey: 'Neutral').
-- -5 to -10: ONLY for obvious keyboard spam like 'asdfghjk' or rude insults (emotionKey: 'Suspicious').
+REASON TAG RULES (2 to 5 WORDS IN CAPITALS):
+Compare what the visitor just said against [Previous Topic]:
+- CASE 1 (SAME STORY): If the visitor is still continuing or defending the previous excuse, keep the exact same 'reasonTag'.
+- CASE 2 (TOPIC SWITCH - MANDATORY UPDATE): If the visitor switches to an entirely different excuse (e.g. from tour guide to lost bag):
+  * YOU MUST CHANGE 'reasonTag' to summarise the new topic (e.g. 'LOST BAG').
+  * In 'guardDialogue', call them out for changing their story ('First you said the tour guide sent you, now you lost a bag? Which is it?').
+  * Deduct -5 to -10 trust.
 
-PHONE PRESET BUTTONS (MUST BE SIMPLE & CLEAR):
-Invent 3 fresh options tailored directly to what you said.
-The 'summaryText' on the button MUST be an obvious 2-word ACTION tag so secondary school kids immediately know what it means:
-- Button 1 (EAE/Student route): summaryText like 'Say For EAE', 'Want To Join', or 'Love Tech'.
-- Button 2 (Helpful route): summaryText like 'Offer Help', 'Fix Website', or 'Carry Stuff'.
-- Button 3 (Polite request): summaryText like 'Ask Nicely', 'Quick Peek', or 'Just 1 Min'.
-'fullDialogue' must be 1 clear, natural sentence a secondary school student would say.
+DEAD END RULE:
+- If the player's story becomes an impossible contradiction or an absolute logical dead end:
+  * Set 'isDeadEnd': true
+  * In 'deadEndReason', explain in 1 simple sentence why their story failed.
+  * In 'guardDialogue', call out their contradiction directly.
+- Otherwise, set 'isDeadEnd': false and 'deadEndReason': ''.
 
-COLORED TEXT RULES:
-- Use <color=#E60012>words</color> (Red) for warnings (e.g. <color=#E60012>restricted</color>, <color=#E60012>off limits</color>).
-- Use <color=#00A3FF>words</color> (Cyan) for hints or tech terms (e.g. <color=#00A3FF>website crash</color>, <color=#00A3FF>EAE students</color>).
-- Highlight maximum 1 or 2 words per line. Always close with </color>.
+TURN 1 INVALID REASON RULE:
+- On Turn 1, do NOT trigger a dead end. Deliver a sarcastic roast, penalise -5 to -10 trust, and give an everyday clue.
+
+TRUST SCORING:
+- +40 to +60: Persuasive reasoning, genuine student interest, or solving your doubt (emotionKey: 'Convinced').
+- +20: Plausible answer or agreeing with your hint (emotionKey: 'Thinking').
+- 0: Neutral chatter or vague reply (emotionKey: 'Neutral').
+- -5 to -10: Story inconsistency, blatant lie, or silly bribe (emotionKey: 'Suspicious').
+
+MAX TRUST / ACCESS GRANTED:
+- If trust reaches 100, verbally unlock the door. Set emotionKey to 'Convinced'.
 
 JSON SCHEMA (no markdown, no backticks):
 {
-  ""guardDialogue"": ""1 to 2 short sentences with hints."",
-  ""emotionKey"": ""Neutral"",
+  ""guardDialogue"": ""1 to 2 short sentences."",
+  ""emotionKey"": ""Thinking"",
   ""trustChange"": 20,
+  ""reasonTag"": ""TWO TO FIVE WORDS"",
+  ""isDeadEnd"": false,
+  ""deadEndReason"": """",
   ""presetOptions"": [
-    { ""summaryText"": ""Say For EAE"", ""fullDialogue"": ""Cher, I am applying for NYP Cloud through EAE, can I please see the setup?"" },
-    { ""summaryText"": ""Offer Help"", ""fullDialogue"": ""I heard the Open House website is lagging, can I help you check the servers?"" },
-    { ""summaryText"": ""Quick Peek"", ""fullDialogue"": ""Sir, I am really interested in IT, can I just get a quick thirty second tour?"" }
+    { ""summaryText"": ""Two Words"", ""fullDialogue"": ""One sentence."" },
+    { ""summaryText"": ""Two Words"", ""fullDialogue"": ""One sentence."" },
+    { ""summaryText"": ""Two Words"", ""fullDialogue"": ""One sentence."" }
   ]
 }";
 
@@ -98,14 +106,17 @@ JSON SCHEMA (no markdown, no backticks):
 
         LLM_Minigame_ResponseData openingData = new LLM_Minigame_ResponseData
         {
-            guardDialogue = "Hold on right there. The <color=#00A3FF>server room</color> is strictly <color=#E60012>off limits</color> to Open House tour visitors. What brings you here?",
+            guardDialogue = "The server room is <color=#E60012>off limits</color> to visitors. Did your <color=#00A3FF>tour guide</color> send you here, or did someone leave their <color=#00A3FF>bag</color> inside?",
             emotionKey = "Neutral",
             trustChange = 0f,
+            reasonTag = "",
+            isDeadEnd = false,
+            deadEndReason = "",
             presetOptions = new LLM_Minigame_PresetOption[]
             {
-                new LLM_Minigame_PresetOption { summaryText = "Server Crash", fullDialogue = "I noticed the NYP Open House website is down. Is rack 2 overheating?" },
-                new LLM_Minigame_PresetOption { summaryText = "EAE Interest", fullDialogue = "I am applying for NYP Cloud Computing through EAE and really want to see the enterprise setup." },
-                new LLM_Minigame_PresetOption { summaryText = "Offer Help", fullDialogue = "I built cloud projects in secondary school, maybe I can spot why the network crashed." }
+                new LLM_Minigame_PresetOption { summaryText = "Tour Guide", fullDialogue = "Yes, our tour guide said we could ask you for a quick look inside!" },
+                new LLM_Minigame_PresetOption { summaryText = "Lost Bag", fullDialogue = "My friend left their bag by the door during the morning tour, I just need to grab it." },
+                new LLM_Minigame_PresetOption { summaryText = "Looks Cool", fullDialogue = "Neither, Sir, the glowing servers just look really cool and I wanted to see them." }
             }
         };
 
@@ -115,30 +126,35 @@ JSON SCHEMA (no markdown, no backticks):
         return openingData;
     }
 
-    // overloaded to accept current trust
+    public void SendPlayerMessage(string playerText, float currentTrust, string lockedReason, Action<LLM_Minigame_ResponseData> onComplete)
+    {
+        StartCoroutine(SendOpenRouterRequest(playerText, currentTrust, lockedReason, onComplete));
+    }
+
+    // backwards compatibility overloads
     public void SendPlayerMessage(string playerText, float currentTrust, Action<LLM_Minigame_ResponseData> onComplete)
     {
-        StartCoroutine(SendOpenRouterRequest(playerText, currentTrust, onComplete));
+        StartCoroutine(SendOpenRouterRequest(playerText, currentTrust, "", onComplete));
     }
 
-    // backwards compatibility for initial start
     public void SendPlayerMessage(string playerText, Action<LLM_Minigame_ResponseData> onComplete)
     {
-        StartCoroutine(SendOpenRouterRequest(playerText, 10f, onComplete));
+        StartCoroutine(SendOpenRouterRequest(playerText, 10f, "", onComplete));
     }
 
-    private IEnumerator SendOpenRouterRequest(string playerText, float currentTrust, Action<LLM_Minigame_ResponseData> onComplete)
+
+    private IEnumerator SendOpenRouterRequest(string playerText, float currentTrust, string lockedReason, Action<LLM_Minigame_ResponseData> onComplete)
     {
         if (chatHistory.Count == 0)
         {
             chatHistory.Add(new OpenRouterMessage { role = "system", content = systemPrompt });
         }
 
-        // provide the current trust level to the ai behind the scenes
         string outgoingPrompt = playerText;
         if (playerText != "start")
         {
-            outgoingPrompt = "[Current Trust: " + Mathf.RoundToInt(currentTrust) + "/100]\nVisitor: \"" + playerText + "\"";
+            string reasonContext = string.IsNullOrEmpty(lockedReason) ? "NONE" : lockedReason;
+            outgoingPrompt = "[Current Trust: " + Mathf.RoundToInt(currentTrust) + "/100 | Previous Topic: \"" + reasonContext + "\"]\nVisitor: \"" + playerText + "\"";
         }
         else
         {
@@ -236,26 +252,33 @@ JSON SCHEMA (no markdown, no backticks):
 
         fallback.presetOptions = new LLM_Minigame_PresetOption[]
         {
-            new LLM_Minigame_PresetOption { summaryText = "Server Crash", fullDialogue = "I noticed the NYP Open House website is down. Is rack 2 overheating?" },
-            new LLM_Minigame_PresetOption { summaryText = "EAE Interest", fullDialogue = "I am applying for NYP Cloud Computing through EAE and really want to see the enterprise setup." },
-            new LLM_Minigame_PresetOption { summaryText = "Offer Help", fullDialogue = "I built cloud projects in secondary school, maybe I can spot why the network crashed." }
+            new LLM_Minigame_PresetOption { summaryText = "Lost Bag", fullDialogue = "My friend left their bag near the door during the morning tour." },
+            new LLM_Minigame_PresetOption { summaryText = "Tour Guide", fullDialogue = "Our tour guide said we could ask to see the cloud racks." },
+            new LLM_Minigame_PresetOption { summaryText = "Looks Cool", fullDialogue = "The glowing lights look like a sci-fi film, can I just look for ten seconds?" }
         };
+
+        fallback.reasonTag = "GENERAL INQUIRY";
+        fallback.isDeadEnd = false;
+        fallback.deadEndReason = "";
 
         if (clean.Contains("win"))
         {
-            fallback.guardDialogue = "You know about cloud deployment already? Impressive for a secondary school student. Take a quick look inside.";
+            fallback.guardDialogue = "You know about cloud servers already? Impressive. Quick look only, do not touch anything.";
             fallback.emotionKey = "Convinced";
             fallback.trustChange = 60f;
+            fallback.reasonTag = "CLOUD KNOWLEDGE";
         }
         else if (clean.Contains("lose"))
         {
-            fallback.guardDialogue = "This is a restricted enterprise server room, not a photo booth. Head back to the tour.";
+            fallback.guardDialogue = "That story has completely fallen apart. You are not making sense.";
             fallback.emotionKey = "Suspicious";
-            fallback.trustChange = -10f;
+            fallback.trustChange = -15f;
+            fallback.isDeadEnd = true;
+            fallback.deadEndReason = "Contradicted earlier statements.";
         }
         else
         {
-            fallback.guardDialogue = "Welcome to NYP, but the server room is off limits to tour visitors. What brings you here?";
+            fallback.guardDialogue = "The server room is off limits. What brings you over here?";
             fallback.emotionKey = "Neutral";
             fallback.trustChange = 0f;
         }
