@@ -9762,7 +9762,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: alt
+  m_text: caps
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: d2052c60b26419c409d40fd04ea53e5b, type: 2}
   m_sharedMaterial: {fileID: 9091196028018381889, guid: d2052c60b26419c409d40fd04ea53e5b, type: 2}
