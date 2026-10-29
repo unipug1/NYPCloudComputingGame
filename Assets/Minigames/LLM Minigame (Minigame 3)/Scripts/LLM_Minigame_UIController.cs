@@ -10,6 +10,11 @@ public class LLM_Minigame_UIController : MonoBehaviour
     [SerializeField] private LLM_Minigame_FocusController focusController;
     [SerializeField] private LLM_Minigame_PropController propController;
 
+    [Header("top right slide buttons")]
+    [SerializeField] private LLM_Minigame_SlideButton phoneSlideButton;
+    [SerializeField] private LLM_Minigame_SlideButton chatSlideButton;
+    [SerializeField] private string chatButtonLetter = "R";
+
     [Header("custom keybinds")]
     [SerializeField] private KeyCode togglePropKey = KeyCode.Tab;
     [SerializeField] private KeyCode reviewDialogueKey = KeyCode.CapsLock;
@@ -43,16 +48,10 @@ public class LLM_Minigame_UIController : MonoBehaviour
     [Header("modals")]
     [SerializeField] private LLM_Minigame_SlideModal winModal;
     [SerializeField] private TextMeshProUGUI winTimeText;
-    [SerializeField] private TextMeshProUGUI winAttemptsText;
     [SerializeField] private TextMeshProUGUI winTakeawayText;
     [SerializeField] private Button winRestartButton;
 
-    [SerializeField] private LLM_Minigame_SlideModal attemptsModal;
-    [SerializeField] private Button attemptsRestartButton;
-    [SerializeField] private Button attemptsContinueButton;
-
     private Action<string> onPlayerSpeaks;
-    private Action onContinueChosen;
     private Action onRestartChosen;
     private Action onReviewRequested;
     private Action onTabPressedRequested;
@@ -81,13 +80,25 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             hotkeyPromptCanvasGroup.alpha = 0f;
         }
+
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SetText("P");
+            phoneSlideButton.SnapOut();
+        }
+
+        if (chatSlideButton != null)
+        {
+            chatSlideButton.SetText(chatButtonLetter);
+            chatSlideButton.SnapOut();
+        }
     }
 
     public void Setup(
-        Action<string> playerSpeakCallback,
-        Action restartCallback,
-        Action reviewCallback,
-        Action tabCallback,
+        Action<string> playerSpeakCallback, 
+        Action restartCallback, 
+        Action reviewCallback, 
+        Action tabCallback, 
         Func<bool> canInteractCheck)
     {
         onPlayerSpeaks = playerSpeakCallback;
@@ -101,9 +112,32 @@ public class LLM_Minigame_UIController : MonoBehaviour
         if (sendButton != null) sendButton.onClick.AddListener(OnSendClicked);
         if (playerInputField != null) playerInputField.onSubmit.AddListener((text) => OnSendClicked());
 
+        // hook top-right slide buttons
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.AddClickListener(() =>
+            {
+                if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke())
+                {
+                    if (playerInputField != null) playerInputField.DeactivateInputField();
+                    onTabPressedRequested?.Invoke();
+                }
+            });
+        }
+
+        if (chatSlideButton != null)
+        {
+            chatSlideButton.AddClickListener(() =>
+            {
+                if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke() && hasPastAnswer)
+                {
+                    DeactivateInputField();
+                    onReviewRequested?.Invoke();
+                }
+            });
+        }
+
         if (winRestartButton != null) winRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
-        if (attemptsRestartButton != null) attemptsRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
-        if (attemptsContinueButton != null) attemptsContinueButton.onClick.AddListener(() => onContinueChosen?.Invoke());
 
         for (int i = 0; i < presetButtons.Length; i++)
         {
@@ -116,10 +150,8 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
     private void Update()
     {
-        // strictly block all interaction keys during animations or ai thinking
         if (canPlayerInteractCheck == null || !canPlayerInteractCheck.Invoke())
         {
-            // guarantee input field is not focused when player cannot interact
             if (playerInputField != null && playerInputField.isFocused)
             {
                 playerInputField.DeactivateInputField();
@@ -130,12 +162,16 @@ public class LLM_Minigame_UIController : MonoBehaviour
         // tab switches between clipboard and phone
         if (Input.GetKeyDown(togglePropKey))
         {
-            DeactivateInputField();
+            if (playerInputField != null)
+            {
+                playerInputField.DeactivateInputField();
+            }
+
             onTabPressedRequested?.Invoke();
             return;
         }
 
-        // capslock toggles review only if a past answer exists
+        // capslock toggles review
         if (hasPastAnswer && Input.GetKeyDown(reviewDialogueKey))
         {
             DeactivateInputField();
@@ -143,10 +179,9 @@ public class LLM_Minigame_UIController : MonoBehaviour
             return;
         }
 
-        // phone number keys
+        // 1 2 3 keys on phone
         if (!propController.IsClipboardActive())
         {
-            // guarantee input field is never focused while on phone
             if (playerInputField != null && playerInputField.isFocused)
             {
                 playerInputField.DeactivateInputField();
@@ -167,7 +202,6 @@ public class LLM_Minigame_UIController : MonoBehaviour
         }
         else
         {
-            // enter submits on clipboard
             if (playerInputField != null && playerInputField.isFocused)
             {
                 if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
@@ -177,7 +211,7 @@ public class LLM_Minigame_UIController : MonoBehaviour
                 }
             }
 
-            // clipboard is active: always keep input field focused even if clicking elsewhere
+            // clipboard active: maintain focus
             if (playerInputField != null && !playerInputField.isFocused)
             {
                 playerInputField.ActivateInputField();
@@ -216,6 +250,37 @@ public class LLM_Minigame_UIController : MonoBehaviour
             playerInputField.DeactivateInputField();
             playerInputField.interactable = false;
         }
+    }
+
+    // manages sliding in the top-right buttons when player turn starts
+    public void ShowPlayerTurnButtons()
+    {
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SetText(propController.IsClipboardActive() ? "P" : "C");
+            phoneSlideButton.SlideIn();
+        }
+
+        // chat button only appears if player has already submitted an answer
+        if (chatSlideButton != null)
+        {
+            if (hasPastAnswer)
+            {
+                chatSlideButton.SetText(chatButtonLetter);
+                chatSlideButton.SlideIn();
+            }
+            else
+            {
+                chatSlideButton.SnapOut();
+            }
+        }
+    }
+
+    // slides out top-right buttons when ai talks or during review
+    public void HidePlayerTurnButtons()
+    {
+        if (phoneSlideButton != null) phoneSlideButton.SlideOut();
+        if (chatSlideButton != null) chatSlideButton.SlideOut();
     }
 
     public void UpdateHotkeyPrompt(string prompt)
@@ -309,6 +374,14 @@ public class LLM_Minigame_UIController : MonoBehaviour
     public void ExecutePropToggle()
     {
         UpdateHotkeyPrompt("");
+
+        // animate the phone button text swap: slides out, changes to P or C, bounces back in
+        string nextLetter = propController.IsClipboardActive() ? "C" : "P";
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SwapTextWithAnimation(nextLetter);
+        }
+
         propController.ToggleProps(() =>
         {
             if (propController.IsClipboardActive())
@@ -466,59 +539,6 @@ public class LLM_Minigame_UIController : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    public void OnDialogueBoxClicked(Action onComplete)
-    {
-        if (isTyping)
-        {
-            StopCoroutine(typewriterRoutine);
-            dialogueText.text = fullCurrentLine;
-            dialogueText.ForceMeshUpdate();
-            dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
-            isTyping = false;
-            onComplete?.Invoke();
-        }
-    }
-
-    public void ShowWinModal(string timeFormatted, int attemptsUsed, int maxAttempts)
-    {
-        if (winTimeText != null) winTimeText.text = timeFormatted;
-        if (winAttemptsText != null) winAttemptsText.text = attemptsUsed + " / " + maxAttempts;
-        if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and casual distraction. Always verify identities before granting access.";
-
-        winModal.SlideIn();
-    }
-
-    public void ShowAttemptsModal(Action onComplete = null)
-    {
-        attemptsModal.SlideIn(onComplete);
-    }
-
-    public void HideAttemptsModal(Action onComplete = null)
-    {
-        attemptsModal.SlideOut(onComplete);
-    }
-
-    public void ForceHideAllModals()
-    {
-        if (winModal != null) winModal.SnapHidden();
-        if (attemptsModal != null) attemptsModal.SnapHidden();
-    }
-
-    public void ClearAll()
-    {
-        hasPastAnswer = false;
-
-        if (thinkingRoutine != null) StopCoroutine(thinkingRoutine);
-        if (typewriterRoutine != null) StopCoroutine(typewriterRoutine);
-
-        dialogueText.text = "";
-        if (playerInputField != null) playerInputField.text = "";
-        DeactivateInputField();
-        UpdateHotkeyPrompt("");
-        ForceHideAllModals();
-    }
-
-    // displays dialogue immediately without typewriter (used on restarts)
     public void DisplayGuardDialogueInstant(string speech)
     {
         if (thinkingRoutine != null)
@@ -534,11 +554,48 @@ public class LLM_Minigame_UIController : MonoBehaviour
         dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
     }
 
+    public void OnDialogueBoxClicked(Action onComplete)
+    {
+        if (isTyping)
+        {
+            StopCoroutine(typewriterRoutine);
+            dialogueText.text = fullCurrentLine;
+            dialogueText.ForceMeshUpdate();
+            dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
+            isTyping = false;
+            onComplete?.Invoke();
+        }
+    }
+
     public void ShowWinModal(string timeFormatted)
     {
+        HidePlayerTurnButtons();
+
         if (winTimeText != null) winTimeText.text = timeFormatted;
         if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and distraction. Always verify identities before granting access.";
 
         winModal.SlideIn();
+    }
+
+    public void ForceHideAllModals()
+    {
+        if (winModal != null) winModal.SnapHidden();
+    }
+
+    public void ClearAll()
+    {
+        hasPastAnswer = false;
+
+        if (thinkingRoutine != null) StopCoroutine(thinkingRoutine);
+        if (typewriterRoutine != null) StopCoroutine(typewriterRoutine);
+
+        dialogueText.text = "";
+        if (playerInputField != null) playerInputField.text = "";
+        DeactivateInputField();
+        UpdateHotkeyPrompt("");
+        HidePlayerTurnButtons();
+
+        // forcefully closes win and attempt modals on reset
+        ForceHideAllModals();
     }
 }
