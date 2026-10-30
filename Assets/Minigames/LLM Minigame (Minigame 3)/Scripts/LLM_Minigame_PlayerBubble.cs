@@ -57,6 +57,8 @@ public class LLM_Minigame_PlayerBubble : MonoBehaviour
 
     public void ShowPlayerDialogue(string dialogue, bool withShake = true, Action onSettled = null)
     {
+        LLM_Minigame_AudioManager.Instance?.PlayPlayerBubbleOpen();
+
         lastSpokenText = dialogue;
         bubbleText.text = dialogue;
 
@@ -140,13 +142,14 @@ public class LLM_Minigame_PlayerBubble : MonoBehaviour
 
     public void DismissBubble()
     {
-        // safety: do not start dismiss if already closed or inactive
+        // do not start dismiss if already closed or inactive
         if (!gameObject.activeInHierarchy)
         {
             SnapClosed();
             return;
         }
 
+        LLM_Minigame_AudioManager.Instance?.PlayPlayerBubbleClose();
         isWaitingForClick = false;
         if (arrowRoutine != null) StopCoroutine(arrowRoutine);
         if (continueArrowRect != null) continueArrowRect.gameObject.SetActive(false);

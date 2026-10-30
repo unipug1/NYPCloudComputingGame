@@ -159,6 +159,8 @@ public class LLM_Minigame_Manager : MonoBehaviour
         SetState(LLM_Minigame_State.PlayerInput);
         focusController.TransitionToPlayerFocus();
 
+        LLM_Minigame_AudioManager.Instance?.PlayPlayerTurnStart();
+
         propController.TransitionUnavailableToActive(() =>
         {
             if (propController.IsClipboardActive())
@@ -251,6 +253,8 @@ public class LLM_Minigame_Manager : MonoBehaviour
         SetState(LLM_Minigame_State.DeadEndModal);
         uiController.UpdateHotkeyPrompt("");
         uiController.HidePlayerTurnButtons();
+
+        LLM_Minigame_AudioManager.Instance?.PlayDeadEnd();
 
         string explanation = string.IsNullOrEmpty(deadEndExplanation) 
             ? "Your story has fallen apart. Mr. Tan caught you in a contradiction." 
@@ -447,6 +451,8 @@ public class LLM_Minigame_Manager : MonoBehaviour
     {
         isTimerRunning = false;
         SetState(LLM_Minigame_State.GameWonModal);
+
+        LLM_Minigame_AudioManager.Instance?.PlayGameWin();
 
         int minutes = Mathf.FloorToInt(elapsedTime / 60f);
         int seconds = Mathf.FloorToInt(elapsedTime % 60f);

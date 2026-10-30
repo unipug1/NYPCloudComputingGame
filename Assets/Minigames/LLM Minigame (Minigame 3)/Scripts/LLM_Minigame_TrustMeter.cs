@@ -74,8 +74,14 @@ public class LLM_Minigame_TrustMeter : MonoBehaviour
         float target = currentTrust + delta;
         target = Mathf.Clamp(target, 10f, 100f);
 
-        if (delta < 0f)
+        if (delta > 0f)
         {
+            LLM_Minigame_AudioManager.Instance?.PlayTrustGoUp();
+        }
+        else if (delta < 0f)
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayTrustGoDown();
+
             if (shakeRoutine != null)
             {
                 StopCoroutine(shakeRoutine);

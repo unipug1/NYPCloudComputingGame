@@ -79,8 +79,6 @@ public class LLM_Minigame_PropController : MonoBehaviour
 
     public bool IsClipboardActive() => isClipboardActive;
     public PropData GetCurrentProp() => isClipboardActive ? clipboard : phone;
-
-    // returns true if any prop movement is currently playing
     public bool IsAnimating() => propRoutine != null || isSwitching;
 
     public void SetupInitialState()
@@ -112,12 +110,16 @@ public class LLM_Minigame_PropController : MonoBehaviour
         if (phone.motionBlur != null) phone.motionBlur.ResetBlur();
     }
 
+    // moves prop from unavailable (dim on side) to active (in hand)
     public void TransitionUnavailableToActive(Action onComplete = null)
     {
         StopCurrentRoutine();
 
         PropData prop = GetCurrentProp();
         prop.rect.gameObject.SetActive(true);
+
+        // play swap in sound
+        PlayPropAudio(prop, isEntering: true);
 
         if (prop.motionBlur != null) prop.motionBlur.TriggerBlur(focusDuration);
         propRoutine = StartCoroutine(UnavailableToActiveRoutine(prop, onComplete));
@@ -156,12 +158,16 @@ public class LLM_Minigame_PropController : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    // dims active prop and moves it aside (review mode)
     public void TransitionActiveToUnavailable(Action onComplete = null)
     {
         StopCurrentRoutine();
 
         PropData prop = GetCurrentProp();
         prop.rect.gameObject.SetActive(true);
+
+        // play swap out sound
+        PlayPropAudio(prop, isEntering: false);
 
         if (prop.motionBlur != null) prop.motionBlur.TriggerBlur(focusDuration);
         propRoutine = StartCoroutine(ActiveToUnavailableRoutine(prop, onComplete));
@@ -202,11 +208,16 @@ public class LLM_Minigame_PropController : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    // exits prop completely offscreen (player submits answer)
     public void SwitchOutActiveProp(Action onComplete)
     {
         StopCurrentRoutine();
 
         PropData activeProp = GetCurrentProp();
+
+        // play swap out sound
+        PlayPropAudio(activeProp, isEntering: false);
+
         if (activeProp.rect.gameObject.activeInHierarchy && activeProp.motionBlur != null)
         {
             activeProp.motionBlur.TriggerBlur(switchOutDuration);
@@ -241,12 +252,16 @@ public class LLM_Minigame_PropController : MonoBehaviour
         onComplete?.Invoke();
     }
 
+    // re-enters prop from offscreen into active pose (after bubble dismisses)
     public void SwitchInActiveProp(Action onComplete = null)
     {
         StopCurrentRoutine();
 
         PropData activeProp = GetCurrentProp();
         activeProp.rect.gameObject.SetActive(true);
+
+        // play swap in sound
+        PlayPropAudio(activeProp, isEntering: true);
 
         if (activeProp.motionBlur != null) activeProp.motionBlur.TriggerBlur(switchInDuration);
         propRoutine = StartCoroutine(SwitchInRoutine(activeProp, onComplete));
@@ -276,34 +291,7 @@ public class LLM_Minigame_PropController : MonoBehaviour
         onComplete?.Invoke();
     }
 
-    public void SelectPhonePresetToClipboard(string fullText, TMP_InputField inputField, Action onFinished = null)
-    {
-        if (IsAnimating()) return;
-
-        ToggleProps(() =>
-        {
-            if (typeRoutine != null) StopCoroutine(typeRoutine);
-            typeRoutine = StartCoroutine(RapidTypeRoutine(fullText, inputField, onFinished));
-        });
-    }
-
-    private IEnumerator RapidTypeRoutine(string text, TMP_InputField inputField, Action onFinished)
-    {
-        inputField.text = "";
-        inputField.interactable = false;
-
-        for (int i = 0; i < text.Length; i++)
-        {
-            inputField.text += text[i];
-            inputField.caretPosition = inputField.text.Length;
-            yield return new WaitForSeconds(0.015f);
-        }
-
-        inputField.interactable = true;
-        inputField.ActivateInputField();
-        onFinished?.Invoke();
-    }
-
+    // swaps between clipboard and phone (Tab or top-right button)
     public void ToggleProps(Action onComplete = null)
     {
         if (IsAnimating()) return;
@@ -316,6 +304,9 @@ public class LLM_Minigame_PropController : MonoBehaviour
         PropData incoming = switchingToPhone ? phone : clipboard;
 
         incoming.rect.gameObject.SetActive(true);
+
+        // play outgoing audio immediately
+        PlayPropAudio(outgoing, isEntering: false);
 
         if (outgoing.rect.gameObject.activeInHierarchy && outgoing.motionBlur != null)
         {
@@ -352,6 +343,9 @@ public class LLM_Minigame_PropController : MonoBehaviour
         ApplyPoseInstant(outgoing, outgoing.switchOffscreenPos, outgoing.switchOffscreenRotZ, outgoing.switchOffscreenScale);
         outgoing.rect.gameObject.SetActive(false);
 
+        // play incoming audio as phase 2 starts
+        PlayPropAudio(incoming, isEntering: true);
+
         ApplyPoseInstant(incoming, incoming.switchOffscreenPos, incoming.switchOffscreenRotZ, incoming.switchOffscreenScale);
         SetShadowInstant(incoming, 0f, false);
 
@@ -373,6 +367,52 @@ public class LLM_Minigame_PropController : MonoBehaviour
         isSwitching = false;
         propRoutine = null;
         onComplete?.Invoke();
+    }
+
+    public void SelectPhonePresetToClipboard(string fullText, TMP_InputField inputField, Action onFinished = null)
+    {
+        if (IsAnimating()) return;
+
+        ToggleProps(() =>
+        {
+            if (typeRoutine != null) StopCoroutine(typeRoutine);
+            typeRoutine = StartCoroutine(RapidTypeRoutine(fullText, inputField, onFinished));
+        });
+    }
+
+    private IEnumerator RapidTypeRoutine(string text, TMP_InputField inputField, Action onFinished)
+    {
+        inputField.text = "";
+        inputField.interactable = false;
+
+        for (int i = 0; i < text.Length; i++)
+        {
+            inputField.text += text[i];
+            inputField.caretPosition = inputField.text.Length;
+
+            // plays throttled keystroke at a comfortable background volume
+            LLM_Minigame_AudioManager.Instance?.PlayKeystroke(0.22f);
+
+            yield return new WaitForSeconds(0.015f);
+        }
+
+        inputField.interactable = true;
+        inputField.ActivateInputField();
+        onFinished?.Invoke();
+    }
+
+    private void PlayPropAudio(PropData prop, bool isEntering)
+    {
+        if (prop == clipboard)
+        {
+            if (isEntering) LLM_Minigame_AudioManager.Instance?.PlayClipboardSwapIn();
+            else LLM_Minigame_AudioManager.Instance?.PlayClipboardSwapOut();
+        }
+        else if (prop == phone)
+        {
+            if (isEntering) LLM_Minigame_AudioManager.Instance?.PlayPhoneSwapIn();
+            else LLM_Minigame_AudioManager.Instance?.PlayPhoneSwapOut();
+        }
     }
 
     private void ApplyPoseInstant(PropData prop, Vector3 pos, float rotZ, Vector3 scale)

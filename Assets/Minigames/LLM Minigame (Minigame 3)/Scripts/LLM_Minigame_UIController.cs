@@ -51,6 +51,9 @@ public class LLM_Minigame_UIController : MonoBehaviour
     [SerializeField] private TextMeshProUGUI winTakeawayText;
     [SerializeField] private Button winRestartButton;
 
+    [Header("audio toggle")]
+    [SerializeField] private Toggle audioToggle;
+
     private Action<string> onPlayerSpeaks;
     private Action onRestartChosen;
     private Action onReviewRequested;
@@ -64,6 +67,9 @@ public class LLM_Minigame_UIController : MonoBehaviour
     private bool hasPastAnswer = false;
     private string fullCurrentLine = "";
     private LLM_Minigame_PresetOption[] currentPresets;
+
+    private string previousInputText = "";
+    private bool suppressTypingAudio = false;
 
     private void Awake()
     {
@@ -109,8 +115,31 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
         hasPastAnswer = false;
 
-        if (sendButton != null) sendButton.onClick.AddListener(OnSendClicked);
-        if (playerInputField != null) playerInputField.onSubmit.AddListener((text) => OnSendClicked());
+        if (audioToggle != null)
+        {
+            // default to enabled
+            audioToggle.isOn = true;
+            audioToggle.onValueChanged.AddListener((isOn) =>
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+                LLM_Minigame_AudioManager.Instance?.SetAudioEnabled(isOn);
+            });
+        }
+
+        if (sendButton != null) sendButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            OnSendClicked();
+        });
+
+        if (playerInputField != null)
+        {
+            playerInputField.onSubmit.AddListener((text) => OnSendClicked());
+            playerInputField.onValueChanged.AddListener(OnInputFieldValueChanged);
+
+            // completely blocks the tab key from ever entering the text box
+            playerInputField.onValidateInput += BlockTabCharacter;
+        }
 
         // hook top-right slide buttons
         if (phoneSlideButton != null)
@@ -119,6 +148,8 @@ public class LLM_Minigame_UIController : MonoBehaviour
             {
                 if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke())
                 {
+                    LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+
                     if (playerInputField != null) playerInputField.DeactivateInputField();
                     onTabPressedRequested?.Invoke();
                 }
@@ -129,6 +160,8 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             chatSlideButton.AddClickListener(() =>
             {
+                LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+
                 if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke() && hasPastAnswer)
                 {
                     DeactivateInputField();
@@ -137,7 +170,12 @@ public class LLM_Minigame_UIController : MonoBehaviour
             });
         }
 
-        if (winRestartButton != null) winRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+        // win restart button
+        if (winRestartButton != null) winRestartButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onRestartChosen?.Invoke();
+        });
 
         for (int i = 0; i < presetButtons.Length; i++)
         {
@@ -145,7 +183,19 @@ public class LLM_Minigame_UIController : MonoBehaviour
             presetButtons[i].onClick.AddListener(() => OnPresetClicked(index));
         }
 
+        playerInputField.onValueChanged.AddListener((val) => LLM_Minigame_AudioManager.Instance?.PlayKeystroke());
         UpdateHotkeyPrompt("");
+    }
+
+    private char BlockTabCharacter(string text, int charIndex, char addedChar)
+    {
+        // if the pressed key is Tab, discard it completely
+        if (addedChar == '\t')
+        {
+            return '\0';
+        }
+
+        return addedChar;
     }
 
     private void Update()
@@ -235,7 +285,12 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
         if (playerInputField != null)
         {
+            // temporarily suppress audio while cleaning rogue tabs
+            suppressTypingAudio = true;
             playerInputField.text = playerInputField.text.Replace("\t", "");
+            previousInputText = playerInputField.text;
+            suppressTypingAudio = false;
+
             playerInputField.interactable = true;
             playerInputField.ActivateInputField();
             playerInputField.Select();
@@ -359,6 +414,8 @@ public class LLM_Minigame_UIController : MonoBehaviour
     private void OnPresetClicked(int index)
     {
         if (canPlayerInteractCheck != null && !canPlayerInteractCheck.Invoke()) return;
+
+        LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
 
         if (currentPresets != null && index < currentPresets.Length)
         {
@@ -532,6 +589,14 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             currentVisible++;
             dialogueText.maxVisibleCharacters = currentVisible;
+
+            // play voice blip on non-whitespace characters
+            char c = dialogueText.textInfo.characterInfo[currentVisible - 1].character;
+            if (!char.IsWhiteSpace(c))
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayVoiceBlip();
+            }
+
             yield return new WaitForSeconds(speed);
         }
 
@@ -572,7 +637,7 @@ public class LLM_Minigame_UIController : MonoBehaviour
         HidePlayerTurnButtons();
 
         if (winTimeText != null) winTimeText.text = timeFormatted;
-        if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and distraction. Always verify identities before granting access.";
+        if (winTakeawayText != null) winTakeawayText.text = "show takeaway text here (not done)";
 
         winModal.SlideIn();
     }
@@ -597,5 +662,31 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
         // forcefully closes win and attempt modals on reset
         ForceHideAllModals();
+    }
+
+    private void OnInputFieldValueChanged(string newText)
+    {
+        if (suppressTypingAudio) return;
+
+        // never play typing audio if clipboard is not the active prop
+        if (propController == null || !propController.IsClipboardActive())
+        {
+            previousInputText = newText;
+            return;
+        }
+
+        // only play audio if a character was actually added (not deleted or wiped to empty)
+        if (newText.Length > previousInputText.Length)
+        {
+            char lastChar = newText[newText.Length - 1];
+
+            // strictly ignore tabs, enters, and newlines
+            if (lastChar != '\t' && lastChar != '\n' && lastChar != '\r')
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayKeystroke();
+            }
+        }
+
+        previousInputText = newText;
     }
 }

@@ -21,8 +21,17 @@ public class LLM_Minigame_ResetConfirmModal : MonoBehaviour
     {
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
 
-        if (yesButton != null) yesButton.onClick.AddListener(() => onConfirmed?.Invoke());
-        if (noButton != null) noButton.onClick.AddListener(() => onCancelled?.Invoke());
+        if (yesButton != null) yesButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onConfirmed?.Invoke();
+        });
+
+        if (noButton != null) noButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onCancelled?.Invoke();
+        });
 
         SnapClosed();
     }

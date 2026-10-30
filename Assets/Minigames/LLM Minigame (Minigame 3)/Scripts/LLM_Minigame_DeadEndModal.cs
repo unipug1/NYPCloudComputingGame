@@ -25,8 +25,17 @@ public class LLM_Minigame_DeadEndModal : MonoBehaviour
         if (modalRect == null) modalRect = GetComponent<RectTransform>();
         if (canvasGroup == null) canvasGroup = GetComponent<CanvasGroup>();
 
-        if (continueButton != null) continueButton.onClick.AddListener(() => onContinueChosen?.Invoke());
-        if (restartButton != null) restartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+        if (continueButton != null) continueButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onContinueChosen?.Invoke();
+        });
+
+        if (restartButton != null) restartButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onRestartChosen?.Invoke();
+        });
 
         SnapClosed();
     }
