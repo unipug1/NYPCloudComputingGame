@@ -9,7 +9,7 @@ using Application = UnityEngine.Application;
 
 public class DialogueTrigger : MonoBehaviour
 {
-    public enum TriggerMode { OnWalkIn, OnInteractKey }
+    public enum TriggerMode { OnWalkIn, OnInteractKey, External }
 
     [Header("trigger mode")]
     [SerializeField] private TriggerMode triggerMode = TriggerMode.OnWalkIn;
@@ -27,6 +27,12 @@ public class DialogueTrigger : MonoBehaviour
 
     private bool hasTriggered = false;
     private bool playerIsInside = false;
+
+    public bool CanInteract => isActiveAndEnabled
+        && (!hasTriggered || !triggerOnlyOnce)
+        && dialogueLines != null && dialogueLines.Count > 0
+        && DialogueManager.Instance != null
+        && !DialogueManager.Instance.IsDialogueRunning;
 
     [ContextMenu("test dialogue")]
     public void TestStartDialogueFromMenu()
@@ -95,17 +101,23 @@ public class DialogueTrigger : MonoBehaviour
 
     public void StartConversation()
     {
+        if (!isActiveAndEnabled || (hasTriggered && triggerOnlyOnce))
+            return;
+
         if (DialogueManager.Instance == null)
         {
             UnityEngine.Debug.LogError("dialoguemanager instance not found in scene", this);
             return;
         }
 
-        if (dialogueLines.Count == 0)
+        if (dialogueLines == null || dialogueLines.Count == 0)
         {
             UnityEngine.Debug.LogWarning("no dialogue lines assigned on this trigger", this);
             return;
         }
+
+        if (DialogueManager.Instance.IsDialogueRunning)
+            return;
 
         hasTriggered = true;
 
