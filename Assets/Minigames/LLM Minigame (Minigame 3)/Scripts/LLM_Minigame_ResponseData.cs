@@ -1,17 +1,25 @@
 using System;
 
 [Serializable]
+public class LLM_Minigame_PresetOption
+{
+    public string summaryText;
+    public string fullDialogue;
+}
+
+[Serializable]
 public class LLM_Minigame_ResponseData
 {
-    // the text the guard says out loud
     public string guardDialogue;
-
-    // which emotion to show on the character
     public string emotionKey;
-
-    // how much the trust bar goes up or down
     public float trustChange;
 
-    // the 3 preset buttons
-    public string[] presetOptions;
+    // core reason tag for the rainbow text
+    public string reasonTag;
+
+    // dead end state and explanation
+    public bool isDeadEnd;
+    public string deadEndReason;
+
+    public LLM_Minigame_PresetOption[] presetOptions;
 }
