@@ -6,89 +6,265 @@ using UnityEngine.UI;
 
 public class LLM_Minigame_UIController : MonoBehaviour
 {
-    [Header("Controllers")]
+    [Header("controllers")]
     [SerializeField] private LLM_Minigame_FocusController focusController;
     [SerializeField] private LLM_Minigame_PropController propController;
-    [SerializeField] private Button toggleModeButton;
 
-    [Header("Player Speech Bubble")]
+    [Header("top right slide buttons")]
+    [SerializeField] private LLM_Minigame_SlideButton phoneSlideButton;
+    [SerializeField] private LLM_Minigame_SlideButton chatSlideButton;
+    [SerializeField] private string chatButtonLetter = "R";
+
+    [Header("custom keybinds")]
+    [SerializeField] private KeyCode togglePropKey = KeyCode.Tab;
+    [SerializeField] private KeyCode reviewDialogueKey = KeyCode.CapsLock;
+    [SerializeField] private KeyCode phoneChoice1Key = KeyCode.Alpha1;
+    [SerializeField] private KeyCode phoneChoice2Key = KeyCode.Alpha2;
+    [SerializeField] private KeyCode phoneChoice3Key = KeyCode.Alpha3;
+
+    [Header("hotkey prompt text")]
+    [SerializeField] private TextMeshProUGUI hotkeyPromptText;
+    [SerializeField] private CanvasGroup hotkeyPromptCanvasGroup;
+    [SerializeField] private float hotkeyFadeDuration = 0.12f;
+
+    [Header("player speech bubble")]
     [SerializeField] private LLM_Minigame_PlayerBubble playerBubble;
 
-    [Header("Clipboard Inputs")]
+    [Header("clipboard inputs")]
     [SerializeField] private TMP_InputField playerInputField;
     [SerializeField] private Button sendButton;
 
-    [Header("Phone Preset Buttons")]
+    [Header("phone preset buttons")]
     [SerializeField] private Button[] presetButtons;
     [SerializeField] private TextMeshProUGUI[] presetButtonTexts;
 
-    [Header("Dialogue Box & Thinking")]
+    [Header("dialogue box & thinking")]
     [SerializeField] private TextMeshProUGUI dialogueText;
     [SerializeField] private Color thinkingColor = new Color(0.5f, 0.5f, 0.5f, 1f);
     [SerializeField] private Color normalTextColor = new Color(0.1f, 0.1f, 0.1f, 1f);
     [SerializeField] private float thinkingDotSpeed = 0.35f;
     [SerializeField] private float typeSpeed = 0.03f;
 
-    [Header("Modals (Slide Panels)")]
+    [Header("modals")]
     [SerializeField] private LLM_Minigame_SlideModal winModal;
     [SerializeField] private TextMeshProUGUI winTimeText;
-    [SerializeField] private TextMeshProUGUI winAttemptsText;
     [SerializeField] private TextMeshProUGUI winTakeawayText;
     [SerializeField] private Button winRestartButton;
 
-    [SerializeField] private LLM_Minigame_SlideModal attemptsModal;
-    [SerializeField] private Button attemptsRestartButton;
-    [SerializeField] private Button attemptsContinueButton;
+    [Header("audio toggle")]
+    [SerializeField] private Toggle audioToggle;
 
     private Action<string> onPlayerSpeaks;
-    private Action onContinueChosen;
     private Action onRestartChosen;
+    private Action onReviewRequested;
+    private Action onTabPressedRequested;
+    private Func<bool> canPlayerInteractCheck;
 
     private Coroutine typewriterRoutine;
     private Coroutine thinkingRoutine;
+    private Coroutine hotkeyFadeRoutine;
     private bool isTyping = false;
+    private bool hasPastAnswer = false;
     private string fullCurrentLine = "";
     private LLM_Minigame_PresetOption[] currentPresets;
 
-    public void Setup(Action<string> playerSpeakCallback, Action continueCallback, Action restartCallback)
+    private string previousInputText = "";
+    private bool suppressTypingAudio = false;
+
+    private void Awake()
+    {
+        if (hotkeyPromptText != null && hotkeyPromptCanvasGroup == null)
+        {
+            hotkeyPromptCanvasGroup = hotkeyPromptText.GetComponent<CanvasGroup>();
+            if (hotkeyPromptCanvasGroup == null)
+            {
+                hotkeyPromptCanvasGroup = hotkeyPromptText.gameObject.AddComponent<CanvasGroup>();
+            }
+        }
+
+        if (hotkeyPromptCanvasGroup != null)
+        {
+            hotkeyPromptCanvasGroup.alpha = 0f;
+        }
+
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SetText("P");
+            phoneSlideButton.SnapOut();
+        }
+
+        if (chatSlideButton != null)
+        {
+            chatSlideButton.SetText(chatButtonLetter);
+            chatSlideButton.SnapOut();
+        }
+    }
+
+    public void Setup(
+        Action<string> playerSpeakCallback, 
+        Action restartCallback, 
+        Action reviewCallback, 
+        Action tabCallback, 
+        Func<bool> canInteractCheck)
     {
         onPlayerSpeaks = playerSpeakCallback;
-        onContinueChosen = continueCallback;
         onRestartChosen = restartCallback;
+        onReviewRequested = reviewCallback;
+        onTabPressedRequested = tabCallback;
+        canPlayerInteractCheck = canInteractCheck;
 
-        sendButton.onClick.AddListener(OnSendClicked);
-        playerInputField.onSubmit.AddListener((text) => OnSendClicked());
-        toggleModeButton.onClick.AddListener(OnToggleClicked);
+        hasPastAnswer = false;
 
-        if (winRestartButton != null)
+        if (audioToggle != null)
         {
-            winRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+            // default to enabled
+            audioToggle.isOn = true;
+            audioToggle.onValueChanged.AddListener((isOn) =>
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+                LLM_Minigame_AudioManager.Instance?.SetAudioEnabled(isOn);
+            });
         }
 
-        if (attemptsRestartButton != null)
+        if (sendButton != null) sendButton.onClick.AddListener(() =>
         {
-            attemptsRestartButton.onClick.AddListener(() => onRestartChosen?.Invoke());
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            OnSendClicked();
+        });
+
+        if (playerInputField != null)
+        {
+            playerInputField.onSubmit.AddListener((text) => OnSendClicked());
+            playerInputField.onValueChanged.AddListener(OnInputFieldValueChanged);
+
+            // completely blocks the tab key from ever entering the text box
+            playerInputField.onValidateInput += BlockTabCharacter;
         }
 
-        if (attemptsContinueButton != null)
+        // hook top-right slide buttons
+        if (phoneSlideButton != null)
         {
-            attemptsContinueButton.onClick.AddListener(() => onContinueChosen?.Invoke());
+            phoneSlideButton.AddClickListener(() =>
+            {
+                if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke())
+                {
+                    LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+
+                    if (playerInputField != null) playerInputField.DeactivateInputField();
+                    onTabPressedRequested?.Invoke();
+                }
+            });
         }
+
+        if (chatSlideButton != null)
+        {
+            chatSlideButton.AddClickListener(() =>
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+
+                if (canPlayerInteractCheck != null && canPlayerInteractCheck.Invoke() && hasPastAnswer)
+                {
+                    DeactivateInputField();
+                    onReviewRequested?.Invoke();
+                }
+            });
+        }
+
+        // win restart button
+        if (winRestartButton != null) winRestartButton.onClick.AddListener(() =>
+        {
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+            onRestartChosen?.Invoke();
+        });
 
         for (int i = 0; i < presetButtons.Length; i++)
         {
             int index = i;
             presetButtons[i].onClick.AddListener(() => OnPresetClicked(index));
         }
+
+        playerInputField.onValueChanged.AddListener((val) => LLM_Minigame_AudioManager.Instance?.PlayKeystroke());
+        UpdateHotkeyPrompt("");
+    }
+
+    private char BlockTabCharacter(string text, int charIndex, char addedChar)
+    {
+        // if the pressed key is Tab, discard it completely
+        if (addedChar == '\t')
+        {
+            return '\0';
+        }
+
+        return addedChar;
     }
 
     private void Update()
     {
-        if (propController.IsClipboardActive() && playerInputField.isFocused)
+        if (canPlayerInteractCheck == null || !canPlayerInteractCheck.Invoke())
         {
-            if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+            if (playerInputField != null && playerInputField.isFocused)
             {
-                OnSendClicked();
+                playerInputField.DeactivateInputField();
+            }
+            return;
+        }
+
+        // tab switches between clipboard and phone
+        if (Input.GetKeyDown(togglePropKey))
+        {
+            if (playerInputField != null)
+            {
+                playerInputField.DeactivateInputField();
+            }
+
+            onTabPressedRequested?.Invoke();
+            return;
+        }
+
+        // capslock toggles review
+        if (hasPastAnswer && Input.GetKeyDown(reviewDialogueKey))
+        {
+            DeactivateInputField();
+            onReviewRequested?.Invoke();
+            return;
+        }
+
+        // 1 2 3 keys on phone
+        if (!propController.IsClipboardActive())
+        {
+            if (playerInputField != null && playerInputField.isFocused)
+            {
+                playerInputField.DeactivateInputField();
+            }
+
+            if (Input.GetKeyDown(phoneChoice1Key) || Input.GetKeyDown(KeyCode.Keypad1))
+            {
+                OnPresetClicked(0);
+            }
+            else if (Input.GetKeyDown(phoneChoice2Key) || Input.GetKeyDown(KeyCode.Keypad2))
+            {
+                OnPresetClicked(1);
+            }
+            else if (Input.GetKeyDown(phoneChoice3Key) || Input.GetKeyDown(KeyCode.Keypad3))
+            {
+                OnPresetClicked(2);
+            }
+        }
+        else
+        {
+            if (playerInputField != null && playerInputField.isFocused)
+            {
+                if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+                {
+                    OnSendClicked();
+                    return;
+                }
+            }
+
+            // clipboard active: maintain focus
+            if (playerInputField != null && !playerInputField.isFocused)
+            {
+                playerInputField.ActivateInputField();
             }
         }
     }
@@ -98,34 +274,228 @@ public class LLM_Minigame_UIController : MonoBehaviour
         return playerInputField != null && playerInputField.isFocused;
     }
 
+    public void FocusInputFieldSafe()
+    {
+        StartCoroutine(DeferredFocusRoutine());
+    }
+
+    private IEnumerator DeferredFocusRoutine()
+    {
+        yield return null;
+
+        if (playerInputField != null)
+        {
+            // temporarily suppress audio while cleaning rogue tabs
+            suppressTypingAudio = true;
+            playerInputField.text = playerInputField.text.Replace("\t", "");
+            previousInputText = playerInputField.text;
+            suppressTypingAudio = false;
+
+            playerInputField.interactable = true;
+            playerInputField.ActivateInputField();
+            playerInputField.Select();
+            playerInputField.caretPosition = playerInputField.text.Length;
+        }
+    }
+
+    public void DeactivateInputField()
+    {
+        if (playerInputField != null)
+        {
+            playerInputField.DeactivateInputField();
+            playerInputField.interactable = false;
+        }
+    }
+
+    // manages sliding in the top-right buttons when player turn starts
+    public void ShowPlayerTurnButtons()
+    {
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SetText(propController.IsClipboardActive() ? "P" : "C");
+            phoneSlideButton.SlideIn();
+        }
+
+        // chat button only appears if player has already submitted an answer
+        if (chatSlideButton != null)
+        {
+            if (hasPastAnswer)
+            {
+                chatSlideButton.SetText(chatButtonLetter);
+                chatSlideButton.SlideIn();
+            }
+            else
+            {
+                chatSlideButton.SnapOut();
+            }
+        }
+    }
+
+    // slides out top-right buttons when ai talks or during review
+    public void HidePlayerTurnButtons()
+    {
+        if (phoneSlideButton != null) phoneSlideButton.SlideOut();
+        if (chatSlideButton != null) chatSlideButton.SlideOut();
+    }
+
+    public void UpdateHotkeyPrompt(string prompt)
+    {
+        if (hotkeyPromptText == null) return;
+
+        if (hotkeyFadeRoutine != null)
+        {
+            StopCoroutine(hotkeyFadeRoutine);
+        }
+
+        hotkeyFadeRoutine = StartCoroutine(FadeHotkeyPromptRoutine(prompt));
+    }
+
+    private IEnumerator FadeHotkeyPromptRoutine(string newPrompt)
+    {
+        if (string.IsNullOrEmpty(newPrompt))
+        {
+            if (hotkeyPromptCanvasGroup != null && hotkeyPromptCanvasGroup.alpha > 0.01f)
+            {
+                float timer = 0f;
+                float startAlpha = hotkeyPromptCanvasGroup.alpha;
+                while (timer < hotkeyFadeDuration)
+                {
+                    timer += Time.deltaTime;
+                    hotkeyPromptCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, timer / hotkeyFadeDuration);
+                    yield return null;
+                }
+                hotkeyPromptCanvasGroup.alpha = 0f;
+            }
+
+            hotkeyPromptText.text = "";
+            yield break;
+        }
+
+        if (hotkeyPromptCanvasGroup != null && hotkeyPromptCanvasGroup.alpha > 0.05f)
+        {
+            float timer = 0f;
+            float startAlpha = hotkeyPromptCanvasGroup.alpha;
+            while (timer < hotkeyFadeDuration * 0.5f)
+            {
+                timer += Time.deltaTime;
+                hotkeyPromptCanvasGroup.alpha = Mathf.Lerp(startAlpha, 0f, timer / (hotkeyFadeDuration * 0.5f));
+                yield return null;
+            }
+        }
+
+        hotkeyPromptText.text = newPrompt;
+
+        if (hotkeyPromptCanvasGroup != null)
+        {
+            float timer = 0f;
+            while (timer < hotkeyFadeDuration)
+            {
+                timer += Time.deltaTime;
+                hotkeyPromptCanvasGroup.alpha = Mathf.Lerp(0f, 1f, timer / hotkeyFadeDuration);
+                yield return null;
+            }
+            hotkeyPromptCanvasGroup.alpha = 1f;
+        }
+    }
+
     private void OnSendClicked()
     {
+        if (canPlayerInteractCheck != null && !canPlayerInteractCheck.Invoke()) return;
+
         string text = playerInputField.text.Trim();
         if (string.IsNullOrEmpty(text)) return;
 
+        hasPastAnswer = true;
         playerInputField.text = "";
+        DeactivateInputField();
         onPlayerSpeaks?.Invoke(text);
     }
 
     private void OnPresetClicked(int index)
     {
+        if (canPlayerInteractCheck != null && !canPlayerInteractCheck.Invoke()) return;
+
+        LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
+
         if (currentPresets != null && index < currentPresets.Length)
         {
-            // send the full spoken dialogue, not the short button summary
+            UpdateHotkeyPrompt("");
             string fullSentence = currentPresets[index].fullDialogue;
-            onPlayerSpeaks?.Invoke(fullSentence);
+            propController.SelectPhonePresetToClipboard(fullSentence, playerInputField, () =>
+            {
+                RefreshPromptState();
+            });
         }
     }
 
-    private void OnToggleClicked()
+    public void ExecutePropToggle()
     {
+        UpdateHotkeyPrompt("");
+
+        // animate the phone button text swap: slides out, changes to P or C, bounces back in
+        string nextLetter = propController.IsClipboardActive() ? "C" : "P";
+        if (phoneSlideButton != null)
+        {
+            phoneSlideButton.SwapTextWithAnimation(nextLetter);
+        }
+
         propController.ToggleProps(() =>
         {
             if (propController.IsClipboardActive())
             {
-                playerInputField.ActivateInputField();
+                FocusInputFieldSafe();
             }
+            else
+            {
+                DeactivateInputField();
+            }
+
+            RefreshPromptState();
         });
+    }
+
+    public void RefreshPromptState()
+    {
+        string toggleLabel = GetCleanKeyName(togglePropKey);
+        string reviewLabel = GetCleanKeyName(reviewDialogueKey);
+        string c1 = GetCleanKeyName(phoneChoice1Key);
+        string c3 = GetCleanKeyName(phoneChoice3Key);
+
+        string pastLine = hasPastAnswer ? "\n<color=#FF6666>[" + reviewLabel + "]</color> Past" : "";
+
+        if (propController.IsClipboardActive())
+        {
+            UpdateHotkeyPrompt("<color=#FFE600>[ENTER]</color> Send\n<color=#00F0FF>[" + toggleLabel + "]</color> Phone" + pastLine);
+        }
+        else
+        {
+            UpdateHotkeyPrompt("<color=#FFE600>[" + c1 + "-" + c3 + "]</color> Pick\n<color=#00F0FF>[" + toggleLabel + "]</color> Board" + pastLine);
+        }
+    }
+
+    public void ShowReviewPrompt()
+    {
+        UpdateHotkeyPrompt("<color=#FFE600>[CLICK]</color> Close");
+    }
+
+    public void ShowContinuePrompt()
+    {
+        UpdateHotkeyPrompt("<color=#FFE600>[CLICK]</color> Next");
+    }
+
+    private string GetCleanKeyName(KeyCode key)
+    {
+        switch (key)
+        {
+            case KeyCode.Alpha1: return "1";
+            case KeyCode.Alpha2: return "2";
+            case KeyCode.Alpha3: return "3";
+            case KeyCode.Return: case KeyCode.KeypadEnter: return "ENTER";
+            case KeyCode.CapsLock: return "CAPS";
+            case KeyCode.Tab: return "TAB";
+            case KeyCode.Space: return "SPACE";
+            default: return key.ToString().ToUpper();
+        }
     }
 
     public void SetPresets(LLM_Minigame_PresetOption[] presets)
@@ -136,21 +506,15 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             if (presets != null && i < presets.Length)
             {
-                // display short summary on button
                 presetButtonTexts[i].text = presets[i].summaryText;
             }
         }
     }
 
-    public void PlayPlayerBubble(string dialogue, Action onComplete)
-    {
-        playerBubble.ShowPlayerDialogue(dialogue, onComplete);
-    }
-
     public void SetThinking(bool thinking)
     {
-        sendButton.interactable = !thinking;
-        playerInputField.interactable = !thinking;
+        if (sendButton != null) sendButton.interactable = !thinking;
+        if (playerInputField != null) playerInputField.interactable = !thinking;
 
         for (int i = 0; i < presetButtons.Length; i++)
         {
@@ -213,16 +577,46 @@ public class LLM_Minigame_UIController : MonoBehaviour
     private IEnumerator TypewriterRoutine(string speech, Action onComplete)
     {
         isTyping = true;
-        dialogueText.text = "";
+        dialogueText.text = speech;
+        dialogueText.maxVisibleCharacters = 0;
+        dialogueText.ForceMeshUpdate();
 
-        for (int i = 0; i < speech.Length; i++)
+        int totalVisibleCharacters = dialogueText.textInfo.characterCount;
+        float speed = typeSpeed > 0f ? typeSpeed : 0.03f;
+        int currentVisible = 0;
+
+        while (currentVisible < totalVisibleCharacters)
         {
-            dialogueText.text += speech[i];
-            yield return new WaitForSeconds(typeSpeed);
+            currentVisible++;
+            dialogueText.maxVisibleCharacters = currentVisible;
+
+            // play voice blip on non-whitespace characters
+            char c = dialogueText.textInfo.characterInfo[currentVisible - 1].character;
+            if (!char.IsWhiteSpace(c))
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayVoiceBlip();
+            }
+
+            yield return new WaitForSeconds(speed);
         }
 
         isTyping = false;
         onComplete?.Invoke();
+    }
+
+    public void DisplayGuardDialogueInstant(string speech)
+    {
+        if (thinkingRoutine != null)
+        {
+            StopCoroutine(thinkingRoutine);
+            thinkingRoutine = null;
+        }
+
+        dialogueText.color = normalTextColor;
+        fullCurrentLine = speech;
+        dialogueText.text = speech;
+        dialogueText.ForceMeshUpdate();
+        dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
     }
 
     public void OnDialogueBoxClicked(Action onComplete)
@@ -231,50 +625,68 @@ public class LLM_Minigame_UIController : MonoBehaviour
         {
             StopCoroutine(typewriterRoutine);
             dialogueText.text = fullCurrentLine;
+            dialogueText.ForceMeshUpdate();
+            dialogueText.maxVisibleCharacters = dialogueText.textInfo.characterCount;
             isTyping = false;
             onComplete?.Invoke();
         }
     }
 
-    public void ShowWinModal(string timeFormatted, int attemptsUsed, int maxAttempts)
+    public void ShowWinModal(string timeFormatted)
     {
+        HidePlayerTurnButtons();
+
         if (winTimeText != null) winTimeText.text = timeFormatted;
-        if (winAttemptsText != null) winAttemptsText.text = attemptsUsed + " / " + maxAttempts;
-        if (winTakeawayText != null) winTakeawayText.text = "Social Engineering relies on urgency, authority, and casual distraction. Always verify identities before granting access.";
+        if (winTakeawayText != null) winTakeawayText.text = "show takeaway text here (not done)";
 
         winModal.SlideIn();
     }
 
-    public void ShowAttemptsModal(Action onComplete = null)
+    public void ForceHideAllModals()
     {
-        attemptsModal.SlideIn(onComplete);
-    }
-
-    public void HideAttemptsModal(Action onComplete = null)
-    {
-        attemptsModal.SlideOut(onComplete);
+        if (winModal != null) winModal.SnapHidden();
     }
 
     public void ClearAll()
     {
+        hasPastAnswer = false;
+
         if (thinkingRoutine != null) StopCoroutine(thinkingRoutine);
         if (typewriterRoutine != null) StopCoroutine(typewriterRoutine);
 
         dialogueText.text = "";
-        playerInputField.text = "";
+        if (playerInputField != null) playerInputField.text = "";
+        DeactivateInputField();
+        UpdateHotkeyPrompt("");
+        HidePlayerTurnButtons();
+
+        // forcefully closes win and attempt modals on reset
         ForceHideAllModals();
     }
 
-    public void ForceHideAllModals()
+    private void OnInputFieldValueChanged(string newText)
     {
-        if (winModal != null)
+        if (suppressTypingAudio) return;
+
+        // never play typing audio if clipboard is not the active prop
+        if (propController == null || !propController.IsClipboardActive())
         {
-            winModal.SnapHidden();
+            previousInputText = newText;
+            return;
         }
 
-        if (attemptsModal != null)
+        // only play audio if a character was actually added (not deleted or wiped to empty)
+        if (newText.Length > previousInputText.Length)
         {
-            attemptsModal.SnapHidden();
+            char lastChar = newText[newText.Length - 1];
+
+            // strictly ignore tabs, enters, and newlines
+            if (lastChar != '\t' && lastChar != '\n' && lastChar != '\r')
+            {
+                LLM_Minigame_AudioManager.Instance?.PlayKeystroke();
+            }
         }
+
+        previousInputText = newText;
     }
 }
