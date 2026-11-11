@@ -1,0 +1,923 @@
+fileFormatVersion: 2
+guid: 9493274a477eb9042856b2a98e0761ac
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 2883091574092920144
+    second: minimap-ui_0
+  - first:
+      213: -2221407345320469421
+    second: minimap-ui_1
+  - first:
+      213: 1334956982947723687
+    second: minimap-ui_2
+  - first:
+      213: 9122436828573428507
+    second: minimap-ui_3
+  - first:
+      213: -2530326422039166159
+    second: minimap-ui_4
+  - first:
+      213: 6146183562435788144
+    second: minimap-ui_5
+  - first:
+      213: 7955838371160663733
+    second: minimap-ui_6
+  - first:
+      213: -3398026783924371059
+    second: minimap-ui_7
+  - first:
+      213: -5512325659778586627
+    second: minimap-ui_8
+  - first:
+      213: -3781484415347558360
+    second: minimap-ui_9
+  - first:
+      213: 4685060131972114524
+    second: minimap-ui_10
+  - first:
+      213: 4584668737993806379
+    second: minimap-ui_11
+  - first:
+      213: 2234934665775693716
+    second: minimap-ui_12
+  - first:
+      213: 309970618836991685
+    second: minimap-ui_13
+  - first:
+      213: -7324863307488884399
+    second: minimap-ui_14
+  - first:
+      213: 3507788014007144399
+    second: minimap-ui_15
+  - first:
+      213: 3102181709721185505
+    second: minimap-ui_16
+  - first:
+      213: -7319448232958622925
+    second: minimap-ui_17
+  - first:
+      213: 8523228946883040599
+    second: minimap-ui_18
+  - first:
+      213: -3516628527486632150
+    second: minimap-ui_19
+  - first:
+      213: -4766169289593955008
+    second: minimap-ui_20
+  - first:
+      213: 5036653969671247015
+    second: minimap-ui_21
+  - first:
+      213: 2067234054968455693
+    second: minimap-ui_22
+  - first:
+      213: -7347724984991477506
+    second: minimap-ui_23
+  - first:
+      213: 8636991526317554055
+    second: minimap-ui_24
+  - first:
+      213: 937947694378483649
+    second: minimap-ui_25
+  - first:
+      213: -8004801084438271608
+    second: minimap-ui_26
+  - first:
+      213: -7020435530636586913
+    second: minimap-ui_27
+  - first:
+      213: 3103356544143812815
+    second: minimap-ui_28
+  - first:
+      213: -6207954535336626664
+    second: minimap-ui_29
+  - first:
+      213: -4695878348585733632
+    second: minimap-ui_30
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 16
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: minimap-ui_0
+      rect:
+        serializedVersion: 2
+        x: 16
+        y: 293
+        width: 16
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 055fab8e28cc20820800000000000000
+      internalID: 2883091574092920144
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_1
+      rect:
+        serializedVersion: 2
+        x: 33
+        y: 293
+        width: 14
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 35cdab8f9c9fb21e0800000000000000
+      internalID: -2221407345320469421
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_2
+      rect:
+        serializedVersion: 2
+        x: 50
+        y: 293
+        width: 12
+        height: 22
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a9b6079d48b68210800000000000000
+      internalID: 1334956982947723687
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_3
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 306
+        width: 15
+        height: 13
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b1b6f0d76f7699e70800000000000000
+      internalID: 9122436828573428507
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_4
+      rect:
+        serializedVersion: 2
+        x: 79
+        y: 303
+        width: 66
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1330290868972ecd0800000000000000
+      internalID: -2530326422039166159
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_5
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 240
+        width: 80
+        height: 80
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 07d745bd261ab4550800000000000000
+      internalID: 6146183562435788144
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_6
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 303
+        width: 80
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5b62473c8d0d86e60800000000000000
+      internalID: 7955838371160663733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_7
+      rect:
+        serializedVersion: 2
+        x: 308
+        y: 309
+        width: 9
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d81cceeb4a8c7d0d0800000000000000
+      internalID: -3398026783924371059
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_8
+      rect:
+        serializedVersion: 2
+        x: 18
+        y: 263
+        width: 12
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: df760aa94094083b0800000000000000
+      internalID: -5512325659778586627
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_9
+      rect:
+        serializedVersion: 2
+        x: 34
+        y: 263
+        width: 12
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 828788b95f7758bc0800000000000000
+      internalID: -3781484415347558360
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_10
+      rect:
+        serializedVersion: 2
+        x: 48
+        y: 262
+        width: 16
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: c58ea851e5da40140800000000000000
+      internalID: 4685060131972114524
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_11
+      rect:
+        serializedVersion: 2
+        x: 64
+        y: 261
+        width: 16
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b2295f43de300af30800000000000000
+      internalID: 4584668737993806379
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_12
+      rect:
+        serializedVersion: 2
+        x: 80
+        y: 261
+        width: 16
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 49f34c1cc35140f10800000000000000
+      internalID: 2234934665775693716
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_13
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 272
+        width: 80
+        height: 32
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5ce3692b2ac3d4400800000000000000
+      internalID: 309970618836991685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_14
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 256
+        width: 80
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 15905d071abd85a90800000000000000
+      internalID: -7324863307488884399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_15
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 236
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fcfc44a1d9a2ea030800000000000000
+      internalID: 3507788014007144399
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_16
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 237
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1ec25a434d92d0b20800000000000000
+      internalID: 3102181709721185505
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_17
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 239
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 33304aabc981c6a90800000000000000
+      internalID: -7319448232958622925
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_18
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 234
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7555a46b197984670800000000000000
+      internalID: 8523228946883040599
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_19
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 224
+        width: 80
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: a2f77247cfc623fc0800000000000000
+      internalID: -3516628527486632150
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_20
+      rect:
+        serializedVersion: 2
+        x: 224
+        y: 192
+        width: 80
+        height: 64
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 04d506a884a2bddb0800000000000000
+      internalID: -4766169289593955008
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_21
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 231
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7a4d0de991ac5e540800000000000000
+      internalID: 5036653969671247015
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_22
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 232
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d023cf99b6a40bc10800000000000000
+      internalID: 2067234054968455693
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_23
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 204
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ef0125a5e03a70a90800000000000000
+      internalID: -7347724984991477506
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_24
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 205
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 789773e4802ccd770800000000000000
+      internalID: 8636991526317554055
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_25
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 207
+        width: 6
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1cf73556572440d00800000000000000
+      internalID: 937947694378483649
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_26
+      rect:
+        serializedVersion: 2
+        x: 53
+        y: 202
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 889256033db39e090800000000000000
+      internalID: -8004801084438271608
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_27
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 208
+        width: 80
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f5010eba417629e90800000000000000
+      internalID: -7020435530636586913
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_28
+      rect:
+        serializedVersion: 2
+        x: 144
+        y: 192
+        width: 80
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: fc86319a556511b20800000000000000
+      internalID: 3103356544143812815
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_29
+      rect:
+        serializedVersion: 2
+        x: 21
+        y: 199
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8163c73cd3ae8d9a0800000000000000
+      internalID: -6207954535336626664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: minimap-ui_30
+      rect:
+        serializedVersion: 2
+        x: 37
+        y: 200
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 00279149583e4deb0800000000000000
+      internalID: -4695878348585733632
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      minimap-ui_0: 2883091574092920144
+      minimap-ui_1: -2221407345320469421
+      minimap-ui_10: 4685060131972114524
+      minimap-ui_11: 4584668737993806379
+      minimap-ui_12: 2234934665775693716
+      minimap-ui_13: 309970618836991685
+      minimap-ui_14: -7324863307488884399
+      minimap-ui_15: 3507788014007144399
+      minimap-ui_16: 3102181709721185505
+      minimap-ui_17: -7319448232958622925
+      minimap-ui_18: 8523228946883040599
+      minimap-ui_19: -3516628527486632150
+      minimap-ui_2: 1334956982947723687
+      minimap-ui_20: -4766169289593955008
+      minimap-ui_21: 5036653969671247015
+      minimap-ui_22: 2067234054968455693
+      minimap-ui_23: -7347724984991477506
+      minimap-ui_24: 8636991526317554055
+      minimap-ui_25: 937947694378483649
+      minimap-ui_26: -8004801084438271608
+      minimap-ui_27: -7020435530636586913
+      minimap-ui_28: 3103356544143812815
+      minimap-ui_29: -6207954535336626664
+      minimap-ui_3: 9122436828573428507
+      minimap-ui_30: -4695878348585733632
+      minimap-ui_4: -2530326422039166159
+      minimap-ui_5: 6146183562435788144
+      minimap-ui_6: 7955838371160663733
+      minimap-ui_7: -3398026783924371059
+      minimap-ui_8: -5512325659778586627
+      minimap-ui_9: -3781484415347558360
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

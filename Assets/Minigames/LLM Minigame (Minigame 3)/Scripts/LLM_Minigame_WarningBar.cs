@@ -42,6 +42,8 @@ public class LLM_Minigame_WarningBar : MonoBehaviour
         if (isHolding && (Input.anyKeyDown || Input.GetMouseButtonDown(0)))
         {
             skipRequested = true;
+            isHolding = false;
+            LLM_Minigame_AudioManager.Instance?.PlayButtonClick();
         }
     }
 
@@ -50,6 +52,8 @@ public class LLM_Minigame_WarningBar : MonoBehaviour
         onFinishCallback = onComplete;
         isHolding = false;
         skipRequested = false;
+
+        LLM_Minigame_AudioManager.Instance?.PlayWarningBar();
 
         if (playRoutine != null)
         {
