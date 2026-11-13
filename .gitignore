@@ -15,6 +15,14 @@
 /[Uu]ser[Ss]ettings/
 *.log
 
+# AI backend dependencies and local kiosk credentials
+/backend/node_modules/
+/backend/*.local.*
+/backend/.env*
+/deployment/*.local.*
+**/nyp-ai-config.json
+__pycache__/
+
 # By default unity supports Blender asset imports, *.blend1 blender files do not need to be commited to version control.
 *.blend1
 *.blend1.meta

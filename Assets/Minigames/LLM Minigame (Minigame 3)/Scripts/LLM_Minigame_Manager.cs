@@ -52,6 +52,7 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
     private bool isFirstBoot = true;
     private bool deadEndIgnoredThisSession = false;
+    private bool receivedStreamedDialogue = false;
 
     private void Start()
     {
@@ -111,6 +112,7 @@ public class LLM_Minigame_Manager : MonoBehaviour
         lastSubmittedPlayerText = "";
         isReviewOpen = false;
         deadEndIgnoredThisSession = false;
+        receivedStreamedDialogue = false;
 
         if (telemetry != null) telemetry.StartNewSession();
 
@@ -189,10 +191,26 @@ public class LLM_Minigame_Manager : MonoBehaviour
             SetState(LLM_Minigame_State.NPCThinking);
             focusController.TransitionToNPCFocus();
             uiController.SetThinking(true);
+            receivedStreamedDialogue = false;
 
             float currentTrust = trustMeter != null ? trustMeter.GetCurrentTrust() : 10f;
-            bridge.SendPlayerMessage(lastSubmittedPlayerText, currentTrust, currentLockedReason, OnGuardResponseReceived);
+            bridge.SendPlayerMessage(lastSubmittedPlayerText, currentTrust, currentLockedReason,
+                OnGuardResponseReceived, OnGuardDialogueStreaming, OnGuardStreamReset);
         });
+    }
+
+    private void OnGuardDialogueStreaming(string dialogue)
+    {
+        if (currentState != LLM_Minigame_State.NPCThinking) return;
+        receivedStreamedDialogue = true;
+        uiController.DisplayGuardDialogueInstant(dialogue);
+    }
+
+    private void OnGuardStreamReset()
+    {
+        if (currentState != LLM_Minigame_State.NPCThinking) return;
+        receivedStreamedDialogue = false;
+        uiController.SetThinking(true);
     }
 
     private void OnGuardResponseReceived(LLM_Minigame_ResponseData response)
@@ -234,7 +252,7 @@ public class LLM_Minigame_Manager : MonoBehaviour
 
         SetState(LLM_Minigame_State.NPCSpeaking);
 
-        uiController.DisplayGuardDialogue(response.guardDialogue, () =>
+        System.Action onDialogueFinished = () =>
         {
             if (response.isDeadEnd && !deadEndIgnoredThisSession)
             {
@@ -245,7 +263,13 @@ public class LLM_Minigame_Manager : MonoBehaviour
                 uiController.ShowContinuePrompt();
                 playerBubble.EnableContinuePrompt(OnPlayerBubbleDismissed);
             }
-        });
+        };
+        if (receivedStreamedDialogue)
+        {
+            uiController.DisplayGuardDialogueInstant(response.guardDialogue);
+            onDialogueFinished();
+        }
+        else uiController.DisplayGuardDialogue(response.guardDialogue, onDialogueFinished);
     }
 
     private void TriggerDeadEndModal(string deadEndExplanation)

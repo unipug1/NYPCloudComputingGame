@@ -134,6 +134,7 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
         if (playerInputField != null)
         {
+            playerInputField.characterLimit = 400;
             playerInputField.onSubmit.AddListener((text) => OnSendClicked());
             playerInputField.onValueChanged.AddListener(OnInputFieldValueChanged);
 
@@ -606,6 +607,12 @@ public class LLM_Minigame_UIController : MonoBehaviour
 
     public void DisplayGuardDialogueInstant(string speech)
     {
+        if (typewriterRoutine != null)
+        {
+            StopCoroutine(typewriterRoutine);
+            typewriterRoutine = null;
+        }
+        isTyping = false;
         if (thinkingRoutine != null)
         {
             StopCoroutine(thinkingRoutine);

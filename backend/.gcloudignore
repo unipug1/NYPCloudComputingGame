@@ -1,0 +1,7 @@
+.gcloudignore
+.git
+node_modules
+test
+*.local.*
+.env*
+coverage
