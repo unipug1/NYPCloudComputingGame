@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Main scene.unity
-    guid: 501820ba20c362f4eae56d2a77b6d927
+    path: Assets/Scenes/newmap.unity
+    guid: 40a907e5066c5e84f81dc2044076cdb2
   - enabled: 1
     path: Assets/Scenes/Harness_Minigame.unity
     guid: 4a17ae9ebb0f16442b5196fec8cf0398

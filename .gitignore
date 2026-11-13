@@ -104,3 +104,9 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# local WebGL test builds (too big for git)
+/build v1/
+/build v1.zip
+/[Bb]uilds/
+*.zip

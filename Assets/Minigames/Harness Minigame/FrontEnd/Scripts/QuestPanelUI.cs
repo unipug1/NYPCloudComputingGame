@@ -8,7 +8,7 @@ using UnityEngine.UI;
 using TMPro;
 
 // Quest list on the left of the screen. Reads QuestManager.Instance.quests, one row per quest:
-//   normal  = available        -> click teleports the player to the quest's area on the map
+//   normal  = available        -> click tracks it: a path on the floor leads you there (click again to stop)
 //   done    = completed (blue, crossed out)
 //   locked  = greyed out until the other quests are done (e.g. Harness)
 // Lives under GameSystems, so it survives scene changes and always shows current progress.
@@ -56,12 +56,16 @@ public class QuestPanelUI : MonoBehaviour
         Build();
         SetCollapsed(!InMap(), true);     // open on the map, tucked away inside minigames
         if (QuestManager.Instance != null) QuestManager.Instance.OnQuestsChanged += Refresh;
+        if (QuestNavigator.Instance != null) QuestNavigator.Instance.OnTrackChanged += Refresh;
         SceneManager.sceneLoaded += OnSceneLoaded;
     }
+
+    static bool IsTracked(Row r) => QuestNavigator.Instance != null && QuestNavigator.Instance.TrackedQuest == r.quest.questName;
 
     void OnDestroy()
     {
         if (QuestManager.Instance != null) QuestManager.Instance.OnQuestsChanged -= Refresh;
+        if (QuestNavigator.Instance != null) QuestNavigator.Instance.OnTrackChanged -= Refresh;
         SceneManager.sceneLoaded -= OnSceneLoaded;
     }
 
@@ -97,7 +101,7 @@ public class QuestPanelUI : MonoBehaviour
 
             var trig = go.AddComponent<EventTrigger>();
             AddTrigger(trig, EventTriggerType.PointerEnter, () => { if (row.cursor && qm.IsUnlocked(row.quest)) row.cursor.SetActive(true); });
-            AddTrigger(trig, EventTriggerType.PointerExit, () => { if (row.cursor) row.cursor.SetActive(false); });
+            AddTrigger(trig, EventTriggerType.PointerExit, () => { if (row.cursor) row.cursor.SetActive(IsTracked(row)); });
 
             go.GetComponent<Button>().onClick.AddListener(() => Select(row));
             rows.Add(row);
@@ -130,7 +134,7 @@ public class QuestPanelUI : MonoBehaviour
             return;
         }
 
-        // teleport to the quest's area on the map (the minigame starts from there)
+        // track it (path guide) - or teleport, if QuestNavigator.teleportOnSelect is on
         if (collapseWhenQuestStarts) SetCollapsed(true, false);
         if (QuestNavigator.Instance != null) QuestNavigator.Instance.GoToQuest(row.quest.questName);
     }
@@ -159,8 +163,11 @@ public class QuestPanelUI : MonoBehaviour
             bool locked = !qm.IsUnlocked(r.quest);
             r.img.sprite = done ? rowDone : rowNormal;
             r.img.color = locked ? lockedTint : Color.white;
+            bool tracked = IsTracked(r);
+            if (r.cursor) r.cursor.SetActive(tracked);      // arrow stays on the quest you're following
             if (r.flash == null)
                 r.label.text = done ? "<s>" + r.quest.questName + "</s>"
+                             : tracked ? "<b>" + r.quest.questName + "</b>"
                                                           : r.quest.questName;
             r.label.color = done ? new Color32(8, 47, 125, 200) : locked ? new Color32(60, 62, 75, 255) : new Color32(20, 24, 40, 255);
         }

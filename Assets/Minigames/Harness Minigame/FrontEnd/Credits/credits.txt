@@ -1,0 +1,68 @@
+<size=120%><b>NYP Cloud Comp OH Game</b></size>
+<color=#9DB4E0>Open House Credits</color>
+
+
+<size=110%><color=#FFD25A><b>ART TEAM</b></color></size>
+
+<color=#FFD25A>Cornelius</color>
+Map Artist
+Created the entire set of map assets
+
+<color=#FFD25A>Jing Heng</color>
+UI Artist
+UI assets, home screen and credit screen
+Helped design the map layout
+
+<color=#FFD25A>Bez</color>
+Map Designer
+Helped design the map layout
+
+<color=#FFD25A>Phoebe</color>
+UI Artist
+Quest UI, login and home screen
+
+<color=#FFD25A>Szeyee</color>
+UI Artist
+Credit screen
+
+<color=#FFD25A>Veilun</color>
+Minigame Artist
+Made the art for the File Transfer Game
+
+
+<size=110%><color=#FFD25A><b>DEV TEAM</b></color></size>
+
+<color=#FFD25A>Wei Li</color>
+LLM Minigame & Dialogue System
+Designed the whole LLM minigame concept and UI layout
+Drew all of its art assets
+Coded the AI minigame system, API connection and UI animations
+Wrote the AI system prompt and behaviour rules
+Designed and coded the dialogue system
+
+<color=#FFD25A>Denni</color>
+Lead Integrator & Harness Game
+Quest system and Cloud Network meter
+Profile creation screen for certificates
+Sign-up and Firebase player data
+Combined all the minigames, the lobby and the map into one game
+Harness Game
+
+<color=#FFD25A>Pushkal</color>
+API Developer
+LLM minigame API connection
+
+<color=#FFD25A>Zongrong</color>
+Gameplay Programmer
+Player movement, camera follow and interaction system
+
+<color=#FFD25A>Szeyee</color>
+Gameplay Programmer
+Minimap and pause menu
+
+<color=#FFD25A>Veilun</color>
+Minigame Developer
+File Transfer minigame
+
+
+<color=#9DB4E0>Made by NYP students for the NYP Open House</color>

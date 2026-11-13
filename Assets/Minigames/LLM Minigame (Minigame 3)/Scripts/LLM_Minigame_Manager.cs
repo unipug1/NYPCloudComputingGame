@@ -453,6 +453,8 @@ public class LLM_Minigame_Manager : MonoBehaviour
         SetState(LLM_Minigame_State.GameWonModal);
 
         LLM_Minigame_AudioManager.Instance?.PlayGameWin();
+        // open house game: mark the LLM quest done (progress bar + quest panel). Use BACK TO MAP to return.
+        if (QuestManager.Instance != null) QuestManager.Instance.CompleteQuest("LLM Game");
 
         int minutes = Mathf.FloorToInt(elapsedTime / 60f);
         int seconds = Mathf.FloorToInt(elapsedTime % 60f);

@@ -4,7 +4,8 @@ using UnityEngine.SceneManagement;
 using TMPro;
 
 // Lives on GameSystems (survives scene changes).
-//  - Quest panel click  -> teleport the player to that quest's MapArea in the map scene
+//  - Quest panel click  -> track that quest: a path on the floor (PathGuide) leads the player to it
+//                          (tick "Teleport On Select" to jump there instead)
 //  - Minigame finished  -> QuestNavigator.FinishQuest("LLM Game") completes it and returns to the map
 public class QuestNavigator : MonoBehaviour
 {
@@ -18,6 +19,14 @@ public class QuestNavigator : MonoBehaviour
     public TMP_Text bannerText;
     public float bannerSeconds = 2.5f;
 
+    [Header("Quest panel")]
+    [Tooltip("Off: clicking a quest shows a path to walk. On: clicking a quest teleports you there.")]
+    public bool teleportOnSelect = false;
+
+    public string TrackedQuest { get; private set; }
+    public event System.Action OnTrackChanged;
+
+    string pendingTrack;       // quest to track once the map scene has loaded
     string pendingQuest;       // teleport target once the map scene has loaded
     string lastQuest;          // the quest whose minigame was opened last
     Coroutine bannerRoutine;
@@ -40,10 +49,26 @@ public class QuestNavigator : MonoBehaviour
     {
         if (SceneManager.GetActiveScene().name == mapSceneName)
         {
-            if (ScreenFader.Instance != null) ScreenFader.Instance.Teleport(() => TeleportTo(questName));
-            else TeleportTo(questName);
+            if (teleportOnSelect) TeleportTo(questName, animate: true);   // chevron wipe / fade
+            else Track(TrackedQuest == questName ? null : questName);     // click again to stop tracking
         }
-        else { pendingQuest = questName; LoadScene(mapSceneName, "Back to the map"); }
+        else
+        {
+            // back to the map (next to the minigame you were in), then show the path
+            if (teleportOnSelect) pendingQuest = questName;
+            else { pendingQuest = lastQuest; pendingTrack = questName; }
+            LoadScene(mapSceneName, "Back to the map");
+        }
+    }
+
+    // show / hide the walking path to a quest (null = none)
+    public void Track(string questName)
+    {
+        TrackedQuest = string.IsNullOrEmpty(questName) ? null : questName;
+        OnTrackChanged?.Invoke();
+        if (TrackedQuest == null) return;
+        var area = MapArea.ForQuest(TrackedQuest);
+        ShowBanner(area != null ? "Follow the path to the " + area.areaName : TrackedQuest + " - area not placed yet");
     }
 
     // ---------------- from an Interactable in a map area ----------------
@@ -63,7 +88,11 @@ public class QuestNavigator : MonoBehaviour
     public static void FinishQuest(string questName)
     {
         if (QuestManager.Instance != null) QuestManager.Instance.CompleteQuest(questName);
-        if (Instance != null) Instance.ReturnToMap(questName);
+        if (Instance != null)
+        {
+            if (Instance.TrackedQuest == questName) Instance.Track(null);   // done: stop showing its path
+            Instance.ReturnToMap(questName);
+        }
     }
 
     // Leave a minigame without finishing it (e.g. a "Back" button)
@@ -92,34 +121,26 @@ public class QuestNavigator : MonoBehaviour
 
     void OnSceneLoaded(Scene s, LoadSceneMode m)
     {
-        if (s.name != mapSceneName || string.IsNullOrEmpty(pendingQuest)) return;
+        if (s.name != mapSceneName) return;
         var q = pendingQuest; pendingQuest = null;
-        StartCoroutine(TeleportNextFrame(q));   // let the map's objects finish Awake/OnEnable first
+        var t = pendingTrack; pendingTrack = null;
+        if (!string.IsNullOrEmpty(q) || !string.IsNullOrEmpty(t))
+            StartCoroutine(AfterMapLoaded(q, t));   // let the map's objects finish Awake/OnEnable first
     }
 
-    IEnumerator TeleportNextFrame(string q)
+    IEnumerator AfterMapLoaded(string teleportTo, string track)
     {
         yield return null;
-        TeleportTo(q);
+        if (!string.IsNullOrEmpty(teleportTo)) TeleportTo(teleportTo);
+        if (!string.IsNullOrEmpty(track)) Track(track);
     }
 
-    void TeleportTo(string questName)
+    void TeleportTo(string questName, bool animate = false)
     {
         var area = MapArea.ForQuest(questName);
         if (area == null) { ShowBanner(questName + " - area not placed yet"); return; }
-
-        var player = GameObject.FindWithTag("Player");
-        if (player != null)
-        {
-            var rb = player.GetComponent<Rigidbody2D>();
-            if (rb != null) { rb.position = area.SpawnPosition; rb.linearVelocity = Vector2.zero; }
-            player.transform.position = area.SpawnPosition;
-            var cam = Camera.main;   // jump the camera too, so it doesn't glide across the map
-            if (cam != null) cam.transform.position = new Vector3(area.SpawnPosition.x, area.SpawnPosition.y, cam.transform.position.z);
-        }
-        else Debug.LogWarning("[Navigator] No object tagged 'Player' in the map.");
-
-        ShowBanner(area.areaName);
+        // chevron wipe (DoorTransition) or fade; arriving from another scene is already covered by the sky fade
+        PlayerTeleport.To(area.SpawnPosition, area.areaName, animate);
     }
 
     public void ShowBanner(string text)

@@ -12,24 +12,7 @@ public class ZoneTeleporter : MonoBehaviour
     public void Go()
     {
         if (arrivalPoint == null) { Debug.LogWarning("[TP] No arrival point on " + name, this); return; }
-        var player = GameObject.FindWithTag("Player");
-        if (player == null) return;
-
-        System.Action move = () =>
-        {
-            Vector3 pos = arrivalPoint.position; pos.z = player.transform.position.z;
-            var rb = player.GetComponent<Rigidbody2D>();
-            if (rb != null) { rb.position = pos; rb.linearVelocity = Vector2.zero; }
-            player.transform.position = pos;
-            var cam = Camera.main;
-            if (cam != null) cam.transform.position = new Vector3(pos.x, pos.y, cam.transform.position.z);
-            var tracker = player.GetComponent<ZoneTracker>();
-            if (tracker != null) tracker.Refresh(false);
-            if (QuestNavigator.Instance != null) QuestNavigator.Instance.ShowBanner(targetZoneName);
-        };
-
-        if (ScreenFader.Instance != null) ScreenFader.Instance.Teleport(move);
-        else move();
+        PlayerTeleport.To(arrivalPoint.position, targetZoneName);
     }
 
     void OnDrawGizmosSelected()

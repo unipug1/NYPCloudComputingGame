@@ -17,7 +17,7 @@ public static class FrontEndBuilder
 {
     const string BASE = "Assets/Minigames/Harness Minigame/FrontEnd/";
     const string ART = BASE + "Art/";
-    const string SCENE = "Assets/Scenes/Main scene.unity";          // the team's map: home screen + map live here
+    const string SCENE = "Assets/Scenes/newmap.unity";              // the team's new map: home screen + map live here
     const string HARNESS_SCENE = "Assets/Scenes/Harness_Minigame.unity";
     const string PREFAB = BASE + "GameSystems.prefab";
     const string MARKER = BASE + "Editor/RUN_BUILD_ONCE.txt";
@@ -51,7 +51,7 @@ public static class FrontEndBuilder
     }
 
     // ============================================================ build
-    [MenuItem("Tools/Front End/Build Home + HUD into Main scene")]
+    [MenuItem("Tools/Front End/Build Home + HUD into newmap")]
     public static void Build()
     {
         FixImports();
@@ -172,6 +172,13 @@ public static class FrontEndBuilder
         template.gameObject.SetActive(false);
 
         // area name banner (shown after teleporting)
+        // BACK TO MAP (bottom-left, only inside minigames)
+        var back = hud.gameObject.AddComponent<BackToMapButton>();
+        var backLabel = WideButton("Btn_BackToMap", hud, "blank_navy", 24, 980, "< BACK TO MAP", back.Click);
+        back.button = backLabel.transform.parent.gameObject;
+        back.button.GetComponent<RectTransform>().localScale = new Vector3(0.7f, 0.7f, 1);
+        back.button.SetActive(false);
+
         var bannerImg = Img("AreaBanner", hud, ART + "Panels/dark_panel.png", (1920 - 900) / 2, 150, false);
         Sliced(bannerImg, 900, 96); bannerImg.raycastTarget = false;
         var bannerText = Text("Text", bannerImg.rectTransform, 0, 0, 900, 96, 44, Color.white, "Area name");
@@ -244,13 +251,30 @@ public static class FrontEndBuilder
         WideButton("Btn_Later", signup, "blank_grey", 184, 760, "MAYBE LATER", fe.SkipSignup);
         fe.signupPanel = signup.parent.gameObject;
 
-        // --- CREDITS ---
-        var credits = DarkPanel("CreditsPanel", root, 880, 600);
+        // --- CREDITS (scrolling; text comes from Credits/credits.txt) ---
+        var credits = DarkPanel("CreditsPanel", root, 1100, 900);
         PanelTitle(credits, "CREDITS");
         BackButton(credits, fe.ShowHome);
-        var ct = Text("CreditsText", credits, 80, 170, 720, 380, 28, Color.white,
-            "NYP Cloud Computing - Open House Game\n\nArt: [name]\nStory: [names]\nGameplay: [names]\nBackend: [names]\n\nMade by NYP students");
+        var view = Rect("Viewport", credits, 70, 130, 960, 720);
+        view.gameObject.AddComponent<RectMask2D>();
+        view.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0);     // catches scroll / drag
+        var ct = Text("CreditsText", view, 0, 0, 960, 720, 30, Color.white, "");
         ct.alignment = TextAlignmentOptions.Top;
+        ct.raycastTarget = true;                                                   // links are clickable
+        ct.lineSpacing = 6;
+        var fit = ct.gameObject.AddComponent<ContentSizeFitter>();
+        fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+        var src = AssetDatabase.LoadAssetAtPath<TextAsset>(BASE + "Credits/credits.txt");
+        var cred = ct.gameObject.AddComponent<CreditsText>();
+        cred.source = src;
+        if (src != null) ct.text = src.text;
+        var scroll = view.gameObject.AddComponent<ScrollRect>();
+        scroll.content = ct.rectTransform; scroll.viewport = view;
+        scroll.horizontal = false; scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 45;
+        var hint = Text("ScrollHint", credits, 0, 856, 1100, 34, 20, new Color32(150, 170, 210, 255), "Scroll for more");
+        hint.alignment = TextAlignmentOptions.Center;
         fe.creditsPanel = credits.parent.gameObject;
 
         login.parent.gameObject.SetActive(false); signup.parent.gameObject.SetActive(false); credits.parent.gameObject.SetActive(false);
@@ -270,6 +294,15 @@ public static class FrontEndBuilder
         band.gameObject.AddComponent<Image>().color = new Color32(8, 20, 50, 150);
         var loading = Text("Loading", band, 0, 0, 1920, 110, 44, Color.white, "Loading");
         loading.alignment = TextAlignmentOptions.Center;
+        // ---------- audio ----------
+        var audio = sys.AddComponent<GameAudio>();
+        audio.music = LoadClip(BASE + "Audio/hub_bgm.wav", true);
+        audio.interact = LoadClip(BASE + "Audio/sfx_interact.wav", false);
+        audio.dialogueBlip = LoadClip(BASE + "Audio/sfx_blip.wav", false);
+        audio.teleport = LoadClip(BASE + "Audio/sfx_teleport.wav", false);
+        audio.uiClick = LoadClip("Assets/Sound Effects/soundshelfstudio-sci-fi-ui-click-sound-596258.mp3", false);
+        audio.questComplete = LoadClip("Assets/Sound Effects/36505577-smooth-completed-notify-274735.mp3", false);
+
         var fader = sys.AddComponent<ScreenFader>();
         fader.group = cg; fader.solid = solid; fader.sky = skyRT; fader.label = loading; fader.labelBand = band.gameObject;
         cg.alpha = 0; cg.blocksRaycasts = false;
@@ -543,6 +576,25 @@ public static class FrontEndBuilder
         }
     }
 
+    static AudioClip LoadClip(string path, bool isMusic)
+    {
+        var imp = AssetImporter.GetAtPath(path) as AudioImporter;
+        if (imp == null) { Debug.LogWarning("[FrontEnd] Missing audio: " + path); return null; }
+        var ss = imp.defaultSampleSettings;
+        var want = isMusic ? AudioClipLoadType.CompressedInMemory : AudioClipLoadType.DecompressOnLoad;
+        if (imp.forceToMono != true || ss.loadType != want)
+        {
+            imp.forceToMono = true;
+            ss.loadType = want;
+            ss.compressionFormat = AudioCompressionFormat.Vorbis;
+            ss.quality = isMusic ? 0.6f : 0.8f;
+            imp.defaultSampleSettings = ss;
+            imp.loadInBackground = isMusic;
+            imp.SaveAndReimport();
+        }
+        return AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+    }
+
     static void AddScenesToBuild()
     {
         var list = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
@@ -554,7 +606,8 @@ public static class FrontEndBuilder
             if (list.Exists(x => x.path == path)) continue;
             list.Add(new EditorBuildSettingsScene(path, true));
         }
-        list.RemoveAll(x => x.path == "Assets/Scenes/Main_Map.unity");   // old placeholder map
+        // old maps (placeholder + the pre-newmap scene the team renamed to MinimapTest)
+        list.RemoveAll(x => x.path == "Assets/Scenes/Main_Map.unity" || x.path == "Assets/Scenes/Main scene.unity" || x.path == "Assets/Scenes/MinimapTest.unity");
         var start = list.FindIndex(x => x.path == SCENE);
         if (start > 0) { var s0 = list[start]; list.RemoveAt(start); list.Insert(0, s0); }
         EditorBuildSettings.scenes = list.ToArray();

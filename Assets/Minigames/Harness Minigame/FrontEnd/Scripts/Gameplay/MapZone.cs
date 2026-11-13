@@ -1,25 +1,39 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Tilemaps;
 
 // One per map section (room). Set up by Tools > Gameplay > Build Map Gameplay.
+// A point is "in" the room when one of the room's floor tilemaps has a tile there
+// (the rooms of the new map overlap as boxes, so tiles decide). Smaller rooms win.
 public class MapZone : MonoBehaviour
 {
     public static readonly List<MapZone> All = new List<MapZone>();
 
     public string zoneName;
-    public Bounds bounds;              // world-space area of the room's floor
-    public RoomData minimapRoom;       // matching entry in the MinimapManager (optional)
+    public Bounds bounds;                       // world-space box around the room's floor
+    public List<Tilemap> floors = new List<Tilemap>();
+    public RoomData minimapRoom;                // matching entry in the MinimapManager (optional)
 
     void OnEnable() { if (!All.Contains(this)) All.Add(this); }
     void OnDisable() { All.Remove(this); }
 
-    public bool Contains(Vector3 p) =>
-        p.x >= bounds.min.x && p.x <= bounds.max.x && p.y >= bounds.min.y && p.y <= bounds.max.y;
+    float Area => bounds.size.x * bounds.size.y;
+
+    public bool Contains(Vector3 p)
+    {
+        if (p.x < bounds.min.x || p.x > bounds.max.x || p.y < bounds.min.y || p.y > bounds.max.y) return false;
+        if (floors == null || floors.Count == 0) return true;
+        foreach (var tm in floors)
+            if (tm != null && tm.HasTile(tm.WorldToCell(p))) return true;
+        return false;
+    }
 
     public static MapZone At(Vector3 p)
     {
-        foreach (var z in All) if (z != null && z.Contains(p)) return z;
-        return null;
+        MapZone best = null;
+        foreach (var z in All)
+            if (z != null && z.Contains(p) && (best == null || z.Area < best.Area)) best = z;
+        return best;
     }
 
     public static MapZone Named(string name)
