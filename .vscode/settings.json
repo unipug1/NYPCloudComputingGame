@@ -67,5 +67,5 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "NYPCloudComputingGame5.slnx"
+    "dotnet.defaultSolution": "NYPCloudComputingGame.slnx"
 }
