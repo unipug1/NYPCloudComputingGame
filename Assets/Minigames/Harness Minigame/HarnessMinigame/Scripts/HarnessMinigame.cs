@@ -47,6 +47,7 @@ public class HarnessMinigame : MonoBehaviour
     [Header("Handoff")]
     public TMP_Text handoffPromptText;
     public string websiteUrl = "https://your-friends-site.com";
+    public TMP_Text copyLabel;                   // label on the COPY button (shows "COPIED!")
 
     [Header("Quest")]
     public QuestCompleteTrigger questTrigger;
@@ -196,7 +197,8 @@ public class HarnessMinigame : MonoBehaviour
         }
     }
 
-    string Mark(bool ok) => ok ? "<color=#2EAA64>✔</color>" : "<color=#E24C46>✘</color>";
+    // plain letters: the default TMP font has no tick/cross glyphs
+    string Mark(bool ok) => ok ? "<color=#2EAA64><b>OK</b></color>" : "<color=#E24C46><b>X </b></color>";
 
     // =========================================================
     // QUIZ (answer Button OnClick with int 0/1/2)
@@ -252,6 +254,20 @@ public class HarnessMinigame : MonoBehaviour
         if (!TemplateDone) { if (yourTurnError) yourTurnError.text = "Pick an option in every section first."; return; }
         ShowOnly(handoffPanel);
         if (handoffPromptText) handoffPromptText.text = BuildPrompt(true);
+    }
+
+    // COPY button: puts the plain prompt (no colours) on the clipboard - works in WebGL too
+    public void CopyPrompt()
+    {
+        WebClipboard.Copy(BuildPrompt(false));
+        if (copyLabel != null) { StopCoroutine(nameof(CopiedFlash)); StartCoroutine(nameof(CopiedFlash)); }
+    }
+
+    IEnumerator CopiedFlash()
+    {
+        copyLabel.text = "COPIED!";
+        yield return new WaitForSeconds(1.5f);
+        copyLabel.text = "COPY";
     }
 
     public void OpenWebsite()

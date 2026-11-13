@@ -114,6 +114,8 @@ public class QuestNavigator : MonoBehaviour
             var rb = player.GetComponent<Rigidbody2D>();
             if (rb != null) { rb.position = area.SpawnPosition; rb.linearVelocity = Vector2.zero; }
             player.transform.position = area.SpawnPosition;
+            var cam = Camera.main;   // jump the camera too, so it doesn't glide across the map
+            if (cam != null) cam.transform.position = new Vector3(area.SpawnPosition.x, area.SpawnPosition.y, cam.transform.position.z);
         }
         else Debug.LogWarning("[Navigator] No object tagged 'Player' in the map.");
 

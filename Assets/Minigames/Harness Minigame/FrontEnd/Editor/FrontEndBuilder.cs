@@ -17,7 +17,7 @@ public static class FrontEndBuilder
 {
     const string BASE = "Assets/Minigames/Harness Minigame/FrontEnd/";
     const string ART = BASE + "Art/";
-    const string SCENE = "Assets/Scenes/Main_Map.unity";            // home screen + map live here
+    const string SCENE = "Assets/Scenes/Main scene.unity";          // the team's map: home screen + map live here
     const string HARNESS_SCENE = "Assets/Scenes/Harness_Minigame.unity";
     const string PREFAB = BASE + "GameSystems.prefab";
     const string MARKER = BASE + "Editor/RUN_BUILD_ONCE.txt";
@@ -51,7 +51,7 @@ public static class FrontEndBuilder
     }
 
     // ============================================================ build
-    [MenuItem("Tools/Front End/Build Home + HUD into Main_Map")]
+    [MenuItem("Tools/Front End/Build Home + HUD into Main scene")]
     public static void Build()
     {
         FixImports();
@@ -554,6 +554,7 @@ public static class FrontEndBuilder
             if (list.Exists(x => x.path == path)) continue;
             list.Add(new EditorBuildSettingsScene(path, true));
         }
+        list.RemoveAll(x => x.path == "Assets/Scenes/Main_Map.unity");   // old placeholder map
         var start = list.FindIndex(x => x.path == SCENE);
         if (start > 0) { var s0 = list[start]; list.RemoveAt(start); list.Insert(0, s0); }
         EditorBuildSettings.scenes = list.ToArray();

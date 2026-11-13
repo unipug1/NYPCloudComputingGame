@@ -46,10 +46,13 @@ public static class HarnessUIBuilder
             var path = AssetDatabase.GUIDToAssetPath(guid);
             var ti = AssetImporter.GetAtPath(path) as TextureImporter;
             if (ti == null) continue;
-            if (ti.textureType == TextureImporterType.Sprite && ti.filterMode == FilterMode.Point &&
+            // full-screen backgrounds must be ONE sprite (if they get sliced, the panel shows only a strip)
+            bool background = path.Contains("/Scenes/") || path.Contains("/Scenes_NoText/");
+            bool modeOk = !background || ti.spriteImportMode == SpriteImportMode.Single;
+            if (modeOk && ti.textureType == TextureImporterType.Sprite && ti.filterMode == FilterMode.Point &&
                 ti.textureCompression == TextureImporterCompression.Uncompressed && !ti.mipmapEnabled) continue;
             ti.textureType = TextureImporterType.Sprite;
-            if (ti.spriteImportMode == SpriteImportMode.None) ti.spriteImportMode = SpriteImportMode.Single;
+            if (background || ti.spriteImportMode == SpriteImportMode.None) ti.spriteImportMode = SpriteImportMode.Single;
             ti.filterMode = FilterMode.Point;
             ti.textureCompression = TextureImporterCompression.Uncompressed;
             ti.mipmapEnabled = false;
@@ -191,6 +194,16 @@ public static class HarnessUIBuilder
         // ===================== 8. HANDOFF =====================
         var ho = Panel("HandoffPanel", rootRT, "Scenes/S8_Handoff_bg.png");
         hm.handoffPromptText = Text("PromptText", ho, 272, 432, 976, 240, 26, Hex("#D5DEE9"), "");
+        // COPY button inside the prompt box (bottom-right)
+        var copyRT = Rect("Btn_CopyPrompt", ho, 1072, 626, 168, 52);
+        var copyImg = copyRT.gameObject.AddComponent<Image>();
+        copyImg.color = Hex("#2E6FD8");
+        var copyBtn = copyRT.gameObject.AddComponent<Button>();
+        copyBtn.targetGraphic = copyImg;
+        var cc = copyBtn.colors; cc.highlightedColor = Hex("#5B93EE"); cc.pressedColor = Hex("#1F4FA0"); copyBtn.colors = cc;
+        UnityEventTools.AddPersistentListener(copyBtn.onClick, hm.CopyPrompt);
+        hm.copyLabel = Text("Label", copyRT, 0, 0, 168, 52, 24, Color.white, "COPY");
+        hm.copyLabel.alignment = TextAlignmentOptions.Center;
         Btn("Btn_OpenBuilder", ho, "Buttons/btn_open_builder", 240, 730, hm.OpenWebsite);
         Btn("Btn_BackToGame", ho, "Buttons/btn_back_to_game", 240, 860, hm.Close);
 
