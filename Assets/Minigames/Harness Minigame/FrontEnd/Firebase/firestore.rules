@@ -1,0 +1,37 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // players/{sha256 of email}  = { name, email, createdAt, done[], updatedAt }
+    match /players/{playerId} {
+
+      // the game can look up ONE player by their email hash (login),
+      // but nobody can list/download the whole player list from the game
+      allow get: if true;
+      allow list: if false;
+
+      // sign up: only these fields, sensible sizes
+      allow create: if request.resource.data.keys().hasOnly(['name', 'email', 'createdAt', 'done'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 60
+        && request.resource.data.email is string
+        && request.resource.data.email.size() <= 100
+        && request.resource.data.email.matches('^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$')
+        && request.resource.data.done is list
+        && request.resource.data.done.size() == 0;
+
+      // progress saving: may only change the quest list + timestamp
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['done', 'updatedAt'])
+        && request.resource.data.done is list
+        && request.resource.data.done.size() <= 10;
+
+      allow delete: if false;
+    }
+
+    // everything else is locked
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

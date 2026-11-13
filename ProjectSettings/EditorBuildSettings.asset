@@ -6,8 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/Scenes/Main_Map.unity
+    guid: de04defdb6e29ea4489da17e70193083
+  - enabled: 1
+    path: Assets/Scenes/Harness_Minigame.unity
+    guid: 4a17ae9ebb0f16442b5196fec8cf0398
+  - enabled: 1
     path: Assets/Scenes/LLM_Minigame.unity
     guid: 6d2224918d777364baf72ed9730a7158
+  - enabled: 1
+    path: Assets/Scenes/FileTransferGame.unity
+    guid: a775c3dd9eb026d4eaee53c4872e5a68
   m_configObjects:
     com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bcd2660ca9b64942af0de543d8d7100, type: 3}
