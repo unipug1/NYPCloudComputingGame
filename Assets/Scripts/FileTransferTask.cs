@@ -27,6 +27,10 @@ public class FileTransferTask : MonoBehaviour
     [Header("Settings")]
     public float transferDuration = 4.0f;
 
+    [Header("Quest")]
+    public string questName = "Download/Upload Game";   // must match the name in QuestManager
+    public bool finishQuestWhenDone = true;              // complete the quest + go back to the map
+
     private bool isTransferring = false;
 
     void OnEnable()
@@ -116,5 +120,8 @@ public class FileTransferTask : MonoBehaviour
         // Optional: Wait 1.5 seconds so the player can see the completion screen, then close
         yield return new WaitForSeconds(1.5f);
         if (taskWindow != null) taskWindow.SetActive(false);
+
+        // tell the quest system: ticks the quest, fills the Cloud Network bar, returns to the map next to the station
+        if (finishQuestWhenDone) QuestNavigator.FinishQuest(questName);
     }
 }

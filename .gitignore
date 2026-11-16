@@ -110,3 +110,8 @@ InitTestScene*.unity*
 /build v1.zip
 /[Bb]uilds/
 *.zip
+
+# WebGL build output (published separately to DenniXDReal/nyp-cloud-game)
+/WebBuild/
+/WebBuild.request
+/WebBuild.status
