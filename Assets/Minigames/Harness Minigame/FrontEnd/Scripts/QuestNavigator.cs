@@ -20,8 +20,8 @@ public class QuestNavigator : MonoBehaviour
     public float bannerSeconds = 2.5f;
 
     [Header("Quest panel")]
-    [Tooltip("Off: clicking a quest shows a path to walk. On: clicking a quest teleports you there.")]
-    public bool teleportOnSelect = false;
+    [Tooltip("On: clicking a quest teleports you next to its station. Off: clicking a quest shows a path to walk.")]
+    public bool teleportOnSelect = true;
 
     public string TrackedQuest { get; private set; }
     public event System.Action OnTrackChanged;
@@ -141,6 +141,11 @@ public class QuestNavigator : MonoBehaviour
         if (area == null) { ShowBanner(questName + " - area not placed yet"); return; }
         // chevron wipe (DoorTransition) or fade; arriving from another scene is already covered by the sky fade
         PlayerTeleport.To(area.SpawnPosition, area.areaName, animate);
+        // highlight the quest you jumped to (ring on the station + bold row), without the "follow the path" banner
+        var qm = QuestManager.Instance;
+        var q = qm != null ? qm.quests.Find(x => x.questName == questName) : null;
+        TrackedQuest = (q != null && q.completed) ? null : questName;
+        OnTrackChanged?.Invoke();
     }
 
     public void ShowBanner(string text)

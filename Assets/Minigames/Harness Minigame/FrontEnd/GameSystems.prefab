@@ -9750,7 +9750,7 @@ MonoBehaviour:
   banner: {fileID: 9050775668068694589}
   bannerText: {fileID: 1832222206588061768}
   bannerSeconds: 2.5
-  teleportOnSelect: 0
+  teleportOnSelect: 1
 --- !u!114 &6047628415638283083
 MonoBehaviour:
   m_ObjectHideFlags: 0
